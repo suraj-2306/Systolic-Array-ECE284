@@ -1,0 +1,2 @@
+Part1: 
+>>>>> Started off with training VGG16 with modified Quant layer with 8 channel input and output
