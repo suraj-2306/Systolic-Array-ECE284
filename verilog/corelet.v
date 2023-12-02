@@ -88,16 +88,29 @@ module corelet (
   genvar i;
 
   generate
-  for (i=0; i<col ; i=i+1) begin : col_num
-sfu sfu_instance(
-    .out(sfuout),
-    .in(macout_s[psum_bw*(i+1)-1:psum_bw*i]),
-    .acc(sfuacc),
-    .relu(sfurelu),
-    .clk(clk),
-    .reset(sfureset)
-);
-end
-endgenerate
+    for (i = 0; i < col; i = i + 1) begin : col_num
+      sfu sfu_instance (
+          .out(sfuout),
+          .in(macout_s[psum_bw*(i+1)-1:psum_bw*i]),
+          .acc(sfuacc),
+          .relu(sfurelu),
+          .clk(clk),
+          .reset(sfureset)
+      );
+    end
+  endgenerate
 
+
+  //need to define the states somwhat like this
+// always@ * begin
+
+//     case(present_state)
+//         IDLE:
+//         W_SRAM_TO_L0:
+//         W_L0_TO_ARRAY:
+//         ACT_SRAM_TO_L0:     
+//         ACT_L0_TO_ARRAY:
+//         SFU_DONE_TO_OUTSRAM:
+//     endcase
+// end
 endmodule
