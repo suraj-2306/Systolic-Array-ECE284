@@ -11,3 +11,4 @@
 ./verilog/l0.v
 ./verilog/ofifo.v
 ./verilog/corelet.v
+./verilog/sfu.v

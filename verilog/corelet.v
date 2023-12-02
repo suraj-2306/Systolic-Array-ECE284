@@ -78,4 +78,26 @@ module corelet (
       .valid(macvalid)
   );
 
+
+  reg sfuacc;
+  reg sfurelu;
+  reg sfureset;
+  wire [bw-1:0] sfuin;
+  wire [psum_bw-1:0] sfuout;
+
+  genvar i;
+
+  generate
+  for (i=0; i<col ; i=i+1) begin : col_num
+sfu sfu_instance(
+    .out(sfuout),
+    .in(macout_s[psum_bw*(i+1)-1:psum_bw*i]),
+    .acc(sfuacc),
+    .relu(sfurelu),
+    .clk(clk),
+    .reset(sfureset)
+);
+end
+endgenerate
+
 endmodule
