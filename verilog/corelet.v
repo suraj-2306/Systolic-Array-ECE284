@@ -56,4 +56,14 @@ wire   ofo_valid;
     .o_valid(ofo_valid)
   );
 
+
+  reg  macreset;
+  wire [psum_bw*col-1:0] macout_s;
+  reg [row*bw-1:0] macin_w; // inst[1]:execute, inst[0]: kernel loading
+  reg [1:0] macinst_w;
+  reg [psum_bw*col-1:0] macin_n;
+  wire [col-1:0] macvalid;
+
+mac_array mac_array_instance(.clk(clk), .reset(macreset), .out_s(macout_s), .in_w(macin_w), .in_n(macin_n), .inst_w(macinst_w), .valid(macvalid));
+
 endmodule
