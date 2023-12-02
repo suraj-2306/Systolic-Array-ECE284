@@ -1,9 +1,6 @@
-// Created by prof. Mingu Kang @VVIP Lab in UCSD ECE department
-// Please do not spread this code without permission 
 module l0 (clk, in, out, rd, wr, o_full, reset, o_ready);
 
-  parameter row  = 8;
-  parameter bw = 4;
+  parameter row  = 8; parameter bw = 4;
 
   input  clk;
   input  wr;
