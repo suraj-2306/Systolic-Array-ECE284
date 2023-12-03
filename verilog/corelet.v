@@ -1,22 +1,24 @@
-//We need add the 
-//On the other hand, a corelet.v includes all the other blocks (e.g., L0, 2d PE array, ofifo) other than SRAMs.
-// module l0 (clk, in, out, rd, wr, o_full, reset, o_ready);
-module corelet (
-    input clk
+//On the other hand, a corelet.v includes all the other blocks (e.g., L0, 2d PE array, ofifo) other than SRAMs. module l0 (clk, in, out, rd, wr, o_full, reset, o_ready);
+module corelet ( input wire clk,
+    input wire start,
+    input wire reset,
+    input wire l0rd,
+    input wire l0wr,
+    input wire [row*bw-1:0] l0in 
 );
 
   parameter col = 8;
   parameter row = 8;
   parameter bw = 4;
   parameter psum_bw = 16;
-  parameter total_cycle = 64;
-  parameter total_cycle_2nd = 8;
+  // parameter total_cycle = 64;
+  // parameter total_cycle_2nd = 8;
 
 
-  reg [bw*row-1:0] w_vector_bin;
-  wire [bw*row-1:0] l0out;
-  reg l0rd = 0;
-  reg l0wr = 0;
+  // reg [bw*row-1:0] w_vector_bin;
+  wire [bw*row-1:0] l02ma;
+  // reg l0rd = 0;
+  // reg l0wr = 0;
   reg l0reset = 0;
   wire l0full;
   wire l0ready;
@@ -27,12 +29,12 @@ module corelet (
       .bw(bw)
   ) l0_instance (
       .clk(clk),
-      .in(w_vector_bin),
-      .out(l0out),
+      .in(l0in),
+      .out(l02ma),
       .rd(l0rd),
       .wr(l0wr),
       .o_full(l0full),
-      .reset(l0reset),
+      .reset(reset),
       .o_ready(l0ready)
   );
 
@@ -50,7 +52,7 @@ module corelet (
       .bw(bw)
   ) ofifo_instance (
       .clk(clk),
-      .in(ofin),
+      .in(ma2of),
       .out(ofout),
       .rd(ofrd),
       .wr(ofwr),
@@ -61,21 +63,17 @@ module corelet (
   );
 
 
-  reg macreset;
-  wire [psum_bw*col-1:0] macout_s;
-  reg [row*bw-1:0] macin_w;  // inst[1]:execute, inst[0]: kernel loading
-  reg [1:0] macinst_w;
-  reg [psum_bw*col-1:0] macin_n;
-  wire [col-1:0] macvalid;
+  wire [psum_bw*col-1:0] ma2of;
+  wire [col-1:0] mavalid;
 
   mac_array mac_array_instance (
       .clk(clk),
-      .reset(macreset),
-      .out_s(macout_s),
-      .in_w(macin_w),
-      .in_n(macin_n),
-      .inst_w(macinst_w),
-      .valid(macvalid)
+      .reset(reset),
+      .out_s(ma2of),
+      .in_w(l02ma),
+      .in_n(128'b0),
+      .inst_w(in_instr),
+      .valid(mavalid)
   );
 
 
@@ -91,7 +89,8 @@ module corelet (
     for (i = 0; i < col; i = i + 1) begin : col_num
       sfu sfu_instance (
           .out(sfuout),
-          .in(macout_s[psum_bw*(i+1)-1:psum_bw*i]),
+          .in(ma2of[psum_bw*(i+1)-1:psum_bw*i]),
+          //TODO: Come back to this and change the ma2of if requied
           .acc(sfuacc),
           .relu(sfurelu),
           .clk(clk),
@@ -100,17 +99,135 @@ module corelet (
     end
   endgenerate
 
+  //Controller state 
+  localparam IDLE = 4'b0000;
+  localparam WGT_SR_L0 = 4'b0001;
+  localparam WGT_L0_MA = 4'b0010;
+  localparam ACT_SR_L0= 4'b0011;
+  localparam ACT_L0_MA= 4'b0100;
 
-  //need to define the states somwhat like this
-// always@ * begin
+  reg [6:0] counter;
+  reg [3:0] state;
+  reg write;
+  reg read;
+  reg [1:0]in_instr;
+  reg [6:0] counter_next;
+  reg [3:0] state_next;
+  reg write_next;
+  reg read_next;
+  reg [1:0]in_instr_next;
 
-//     case(present_state)
-//         IDLE:
-//         W_SRAM_TO_L0:
-//         W_L0_TO_ARRAY:
-//         ACT_SRAM_TO_L0:     
-//         ACT_L0_TO_ARRAY:
-//         SFU_DONE_TO_OUTSRAM:
-//     endcase
-// end
+  always @(posedge clk or posedge reset)
+    begin
+        if(reset)
+        begin
+            counter <= 'd0;
+            state   <= 'd0;
+            write   <= 'd0;
+            read    <= 'd0;
+            in_instr<= 'd0;
+            // kij     <= 'd0;
+        end
+        else
+        begin
+            counter <= #1 counter_next ;
+            state   <= #1 state_next   ;
+            write   <= #1 write_next   ;
+            read   <= #1 read_next   ;
+            in_instr<= #1 in_instr_next;
+            // kij     <= #1 kij_next;
+        end
+    end 
+
+  //Conventions
+  // write_next is 1 for L0 write
+  // write_next is 0 for L0 read
+  always @(*) begin
+    state_next   <= state;
+    counter_next <= counter;
+    in_instr_next   = 2'd0;
+    write_next   <= 'b0;
+    read_next    <= 'b0;
+    // kij_next        = kij;
+    case (state)
+      IDLE:
+      if (start) begin
+        state_next   <= WGT_SR_L0;
+        counter_next <= 'd0;  //initialise to 0 when start
+        // kij_next        = 'd0;      //initialise to 0 when start
+      end else state_next = IDLE;
+      WGT_SR_L0:
+      //Write the logic for next state
+        if(counter>'d7)
+        begin
+          counter_next<=0;
+          state_next<=WGT_L0_MA;
+          write_next <= 1'b0;
+        end
+        //Need to cover CEN, WEN and Addr, for the SRAM
+        //Also need to cover write, in for L0 
+        else begin
+        counter_next<=counter +1;
+        state_next<=state;
+        write_next<=1'b1;
+      end
+      WGT_L0_MA:
+        if(counter>'d23)
+        begin
+          counter_next<=0;
+          state_next<=ACT_SR_L0;
+          write_next <= 1'b0;
+        end
+        else if(counter>'d7)
+        begin
+          state_next<=state;
+          counter_next <= counter+1;
+          in_instr_next<=2'b00;
+          read_next<=1'b0;
+        end
+        else
+        begin
+          state_next<=state;
+          counter_next <= counter+1;
+          in_instr_next<=2'b01;
+          read_next<=1'b1;
+        end
+      ACT_SR_L0:
+        if(counter>'d15)
+        begin
+          counter_next<=0;
+          state_next<=ACT_L0_MA;
+          write_next <= 1'b0;
+        end
+        else 
+        begin       
+        counter_next<=counter +1;
+        state_next<=state;
+        write_next<=1'b1;
+        end 
+      ACT_L0_MA:
+        if(counter>'d31)
+        begin
+          counter_next<=0;
+          state_next<=ACT_SR_L0;
+          write_next <= 1'b0;
+        end
+        else if(counter>'d15)
+        begin
+          state_next<=state;
+          counter_next <= counter+1;
+          in_instr_next<=2'b00;
+          read_next<=1'b0;
+        end
+        else
+        begin
+          state_next<=state;
+          counter_next <= counter+1;
+          in_instr_next<=2'b10;
+          read_next<=1'b1;
+        end
+      // PSUM
+
+    endcase
+  end
 endmodule
