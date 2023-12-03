@@ -2,9 +2,12 @@
 module corelet ( input wire clk,
     input wire start,
     input wire reset,
-    input wire l0rd,
-    input wire l0wr,
-    input wire [row*bw-1:0] l0in 
+    input   [31:0]  I_Q,
+    output  [6:0]   I_A,
+    output          I_CEN,
+    output          I_WEN
+    // input wire l0rd, input wire l0wr,
+    // input wire [row*bw-1:0] l0in 
 );
 
   parameter col = 8;
@@ -15,29 +18,56 @@ module corelet ( input wire clk,
   // parameter total_cycle_2nd = 8;
 
 
-  // reg [bw*row-1:0] w_vector_bin;
   wire [bw*row-1:0] l02ma;
-  // reg l0rd = 0;
-  // reg l0wr = 0;
   reg l0reset = 0;
   wire l0full;
   wire l0ready;
+  logic [3:0] kij, kij_next;
+    logic [3:0] lut_ptr;
 
 
   //l0 operations. Input can be the instructions or data
-  l0 #(
-      .bw(bw)
-  ) l0_instance (
-      .clk(clk),
-      .in(l0in),
-      .out(l02ma),
-      .rd(l0rd),
-      .wr(l0wr),
-      .o_full(l0full),
-      .reset(reset),
-      .o_ready(l0ready)
-  );
+  //
 
+    logic [6:0] ACT_ADDR;
+    logic [6:0] WEIGHT_ADDR;
+    logic [6:0] AW_ADDR_MUX;
+
+    always @*
+    begin
+        case(kij)
+            'd0: lut_ptr = 'd0;
+            'd1: lut_ptr = 'd1;
+            'd2: lut_ptr = 'd2;
+            'd3: lut_ptr = 'd6;
+            'd4: lut_ptr = 'd7;
+            'd5: lut_ptr = 'd8;
+            'd6: lut_ptr = 'd12;
+            'd7: lut_ptr = 'd13;
+            'd8: lut_ptr = 'd14;
+        endcase
+        ACT_ADDR = lut_ptr + counter + {counter[3:2],1'b0};
+        WEIGHT_ADDR = {kij,3'b0} + counter;
+        AW_ADDR_MUX = (state==ACT_SR_L0) ? ACT_ADDR + 72 : WEIGHT_ADDR;
+    end
+  //
+  //
+    assign I_A    = AW_ADDR_MUX;    //output  [6:0] 
+    assign I_CEN     = !write_next;    //output        
+    assign I_WEN     = 1'b1;           //output       
+
+l0 #(
+        .bw(bw)
+    ) l0_instance(
+        .clk(clk), 
+        .in(I_Q), //Q_MUX),  
+        .out(l02ma), 
+        .reset(reset),
+        .wr(l0wr), 
+        .rd(l0rd), 
+        .o_full(), 
+        .o_ready()
+            );
 
   reg [col*bw-1:0] ofwr;
   reg ofrd;
@@ -126,7 +156,7 @@ module corelet ( input wire clk,
             write   <= 'd0;
             read    <= 'd0;
             in_instr<= 'd0;
-            // kij     <= 'd0;
+            kij     <= 'd0;
         end
         else
         begin
@@ -135,26 +165,26 @@ module corelet ( input wire clk,
             write   <= #1 write_next   ;
             read   <= #1 read_next   ;
             in_instr<= #1 in_instr_next;
-            // kij     <= #1 kij_next;
+            kij     <= #1 kij_next;
         end
     end 
 
   //Conventions
   // write_next is 1 for L0 write
   // write_next is 0 for L0 read
-  always @(*) begin
+  always @* begin
     state_next   <= state;
     counter_next <= counter;
-    in_instr_next   = 2'd0;
+    in_instr_next   <= 2'd0;
     write_next   <= 'b0;
     read_next    <= 'b0;
-    // kij_next        = kij;
+    kij_next        <= kij;
     case (state)
       IDLE:
       if (start) begin
         state_next   <= WGT_SR_L0;
         counter_next <= 'd0;  //initialise to 0 when start
-        // kij_next        = 'd0;      //initialise to 0 when start
+        kij_next        = 'd0;      //initialise to 0 when start
       end else state_next = IDLE;
       WGT_SR_L0:
       //Write the logic for next state
@@ -211,6 +241,7 @@ module corelet ( input wire clk,
           counter_next<=0;
           state_next<=ACT_SR_L0;
           write_next <= 1'b0;
+          kij_next        = kij=='d8 ? 'd8 : kij+'d1;
         end
         else if(counter>'d15)
         begin
