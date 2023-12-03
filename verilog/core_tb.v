@@ -4,8 +4,6 @@ module core_tb;
   reg reset;
   reg start;
 
-
-
   parameter bw = 4;
   parameter psum_bw = 16;
   parameter len_kij = 9;
@@ -35,7 +33,6 @@ module core_tb;
       .clk  (clk),
       .start(start),
       .reset(reset),
-
       .TB_CL_SELECT(TB_CL_SELECT),
       .TB_I_CEN(I_CEN),
       .TB_I_A(I_A),
@@ -94,12 +91,51 @@ module core_tb;
     //   $display("%d", i);
 
 
+    a_file = $fopen("verilog/activation.txt", "r");
+
+    // Following three lines are to remove the first three comment lines of the file
+    a_scan_file = $fscanf(a_file,"%s", captured_data);
+    a_scan_file = $fscanf(a_file,"%s", captured_data);
+    a_scan_file = $fscanf(a_file,"%s", captured_data);
+
+    #101 reset= 0;
+    #10
+    I_CEN = 0;
+    I_WEN = 0;
+    TB_CL_SELECT = 1;
+
+    for (i=0; i<36 ; i=i+1)
+    begin
+        #10
+        I_A   = 72 + i;
+        a_scan_file = $fscanf(a_file,"%32b", I_D);
+        inputSramData[72+i][31:0] = I_D;
+    end
+    #10
+    I_CEN = 1;
+    I_WEN = 1;
+    TB_CL_SELECT = 1;
+    for (i=0; i<36 ; i=i+1)
+    begin
+        #5
+        I_CEN = 0;
+        I_WEN = 1;
+        I_A = i+72;
+        #5
+        if (inputSramData[72+i][31:0] == I_Q)
+            $display("%2d-th read data is %h --- Data matched", i, I_Q);
+        else begin
+            $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, I_Q, inputSramData[72+i]);
+            error = error+1;
+        end
+    end
+
     // end
       #150 start = 1;
+
       TB_CL_SELECT = 0;
       I_WEN = 1;
       I_CEN = 1;
-
 
       #10000 $finish;
     end

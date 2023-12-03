@@ -16,8 +16,8 @@ parameter psum_bw = 16;
 
 sram_32b_w128 sram_instance (
 	.CLK(clk), 
-	.CEN(MUX_I_CEN), 
-	.WEN(MUX_I_WEN),
+	.CEN(MUX_I_WEN), 
+	.WEN(MUX_I_CEN),
   .A(MUX_I_A), 
   .D(MUX_I_D), 
   .Q(I_Q)

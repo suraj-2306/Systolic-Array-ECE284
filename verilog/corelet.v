@@ -23,7 +23,7 @@ module corelet ( input wire clk,
   wire l0full;
   wire l0ready;
   logic [3:0] kij, kij_next;
-    logic [3:0] lut_ptr;
+  logic [3:0] lut_ptr;
 
 
   //l0 operations. Input can be the instructions or data
@@ -63,8 +63,8 @@ l0 #(
         .in(I_Q), //Q_MUX),  
         .out(l02ma), 
         .reset(reset),
-        .wr(l0wr), 
-        .rd(l0rd), 
+        .wr(write), 
+        .rd(read), 
         .o_full(), 
         .o_ready()
             );
@@ -184,8 +184,8 @@ l0 #(
       if (start) begin
         state_next   <= WGT_SR_L0;
         counter_next <= 'd0;  //initialise to 0 when start
-        kij_next        = 'd0;      //initialise to 0 when start
-      end else state_next = IDLE;
+        kij_next    <= 'd0;      //initialise to 0 when start
+      end else state_next <= IDLE;
       WGT_SR_L0:
       //Write the logic for next state
         if(counter>'d7)
@@ -197,9 +197,9 @@ l0 #(
         //Need to cover CEN, WEN and Addr, for the SRAM
         //Also need to cover write, in for L0 
         else begin
-        counter_next<=counter +1;
-        state_next<=state;
-        write_next<=1'b1;
+          counter_next<=counter +1;
+          state_next<=state;
+          write_next<=1'b1;
       end
       WGT_L0_MA:
         if(counter>'d23)
@@ -212,15 +212,15 @@ l0 #(
         begin
           state_next<=state;
           counter_next <= counter+1;
-          in_instr_next<=2'b00;
+          in_instr_next <=2'b00;
           read_next<=1'b0;
         end
         else
         begin
-          state_next<=state;
+          state_next <= state;
           counter_next <= counter+1;
-          in_instr_next<=2'b01;
-          read_next<=1'b1;
+          in_instr_next <= 2'b01;
+          read_next <= 1'b1;
         end
       ACT_SR_L0:
         if(counter>'d15)
@@ -231,17 +231,17 @@ l0 #(
         end
         else 
         begin       
-        counter_next<=counter +1;
-        state_next<=state;
-        write_next<=1'b1;
+          counter_next<=counter +1;
+          state_next<=state;
+          write_next<=1'b1;
         end 
       ACT_L0_MA:
         if(counter>'d31)
         begin
           counter_next<=0;
           state_next<=ACT_SR_L0;
-          write_next <= 1'b0;
-          kij_next        = kij=='d8 ? 'd8 : kij+'d1;
+          write_next<= 1'b0;
+          kij_next <= kij=='d8 ? 'd8 : kij+'d1;
         end
         else if(counter>'d15)
         begin
