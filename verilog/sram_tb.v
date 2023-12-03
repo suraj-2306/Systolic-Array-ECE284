@@ -1,7 +1,6 @@
 // Created by prof. Mingu Kang @VVIP Lab in UCSD ECE department
 // Please do not spread this code without permission 
 
-`timescale 1 ns/1 ps
 
 module sram_tb;
 
