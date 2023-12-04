@@ -11,6 +11,8 @@ module sfu_tb;
   reg reset;
 
   integer i = 0;
+  integer j = 0;
+  integer validate[input_ch];
   reg send_out=0;
   reg clk=0;
 
@@ -30,30 +32,34 @@ module sfu_tb;
     $display("Entered the program!");
 
     // Init
-    reset=0;
-    clk= 0;
-    #10
-    reset = 1'b1;
-    #3
-    reset=0;
-    valid = 1'b0;
-    #1  valid = 1'b1;
+    reset = 0;
+    clk = 0;
+    #10 reset = 1'b1;
+    #3 reset = 0; valid = 1'b0;
+    #1 valid = 1'b1;
 
     for (i=0; i<input_ch*num_iters; i=i+1) begin
-      #2 clk= 1'b0;   psum_in = i;
-      #2 clk= 1'b1;
+      validate[i] = 0;
+    end
+
+    for (i=0; i<input_ch*num_iters; i=i+1) begin
+      #2 clk = 1'b0;   psum_in = i;
+      #2 clk = 1'b1;
+      validate[j] = validate[j] + i;
+      j = j+1;
+      if (j == input_ch) begin
+        j = 0;
+      end
     end
     valid=0;
 
     #2 send_out = 1'b1;
 
-    #100 $finish;
+    #10 $finish;
   end
 
-initial begin #2
-
-forever
-    #2 clk= ~clk;
-end
+  initial begin #2
+    forever #2 clk= ~clk;
+  end
 
 endmodule
