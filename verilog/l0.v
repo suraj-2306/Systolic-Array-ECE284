@@ -1,4 +1,4 @@
-   54 endmodule 
+module l0 (clk, in, out, rd, wr, o_full, reset, o_ready, cascade);
 
   parameter row  = 8;
   parameter bw = 4;
@@ -8,6 +8,7 @@
   input  rd;
   input  reset;
   input  [row*bw-1:0] in;
+  input cascade;
   output [row*bw-1:0] out;
   output o_full;
   output o_ready;
@@ -35,7 +36,7 @@
       .reset(reset));
   end
 
-
+//YJ Find a way to select between these read signal generations. Should be cascaded for actiations, NOT for weights.
   always @ (posedge clk) begin
    if (reset) begin
       rd_en <= 8'b00000000;
@@ -49,7 +50,7 @@
 
       //////////////// version2: read 1 row at a time /////////////////
       ///////////////////////////////////////////////////////
-      rd_en<={rd_en[row-2:0],rd};
+      rd_en <= cascade ? {rd_en[row-2:0],rd} : {row{rd}};
     end
 
 endmodule

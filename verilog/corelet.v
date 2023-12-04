@@ -22,6 +22,7 @@ module corelet ( input wire clk,
   reg l0reset = 0;
   wire l0full;
   wire l0ready;
+  reg cascade;
   logic [3:0] kij, kij_next;
   logic [3:0] lut_ptr;
 
@@ -48,7 +49,8 @@ module corelet ( input wire clk,
         endcase
         ACT_ADDR = lut_ptr + counter + {counter[3:2],1'b0};
         WEIGHT_ADDR = {kij,3'b0} + counter;
-        AW_ADDR_MUX = (state==ACT_SR_L0) ? ACT_ADDR + 72 : WEIGHT_ADDR;
+        // YJ // Need to review this logic
+        AW_ADDR_MUX = (state==ACT_LD) ? ACT_ADDR + 72 : WEIGHT_ADDR;
     end
   //
   //
@@ -66,7 +68,8 @@ l0 #(
         .wr(write), 
         .rd(read), 
         .o_full(), 
-        .o_ready()
+        .o_ready(),
+        .cascade(cascade)
             );
 
   reg [col*bw-1:0] ofwr;
@@ -103,7 +106,8 @@ l0 #(
       .in_w(l02ma),
       .in_n(128'b0),
       .inst_w(in_instr),
-      .valid(mavalid)
+      .valid(mavalid),
+      .cascade(cascade)
   );
 
 
@@ -131,10 +135,14 @@ l0 #(
 
   //Controller state 
   localparam IDLE = 4'b0000;
-  localparam WGT_SR_L0 = 4'b0001;
-  localparam WGT_L0_MA = 4'b0010;
-  localparam ACT_SR_L0= 4'b0011;
-  localparam ACT_L0_MA= 4'b0100;
+  // localparam WGT_SR_L0 = 4'b0001;
+  // localparam WGT_L0_MA = 4'b0010;
+  // localparam ACT_SR_L0= 4'b0011;
+  // localparam ACT_L0_MA= 4'b0100;
+  localparam WT_LD = 4'b0001;
+  localparam WT_ACT_INTER = 4'b0010;
+  localparam ACT_LD= 4'b0011;
+  localparam WAIT_FOR_NEXT= 4'b0100;
 
   reg [6:0] counter;
   reg [3:0] state;
@@ -181,83 +189,93 @@ l0 #(
     kij_next        <= kij;
     case (state)
       IDLE:
-      if (start) begin
-        state_next   <= WGT_SR_L0;
-        counter_next <= 'd0;  //initialise to 0 when start
-        kij_next    <= 'd0;      //initialise to 0 when start
-      end else state_next <= IDLE;
-      WGT_SR_L0:
-      //Write the logic for next state
-        if(counter>'d7)
-        begin
-          counter_next<=0;
-          state_next<=WGT_L0_MA;
-          write_next <= 1'b0;
+        if (start) begin
+          state_next   <= WT_LD;
+          counter_next <= 'd0;  //initialise to 0 when start
+          kij_next    <= 'd0;      //initialise to 0 when start
         end
-        //Need to cover CEN, WEN and Addr, for the SRAM
-        //Also need to cover write, in for L0 
-        else begin
-          counter_next<=counter +1;
-          state_next<=state;
-          write_next<=1'b1;
-      end
-      WGT_L0_MA:
-        if(counter>'d23)
-        begin
-          counter_next<=0;
-          state_next<=ACT_SR_L0;
-          write_next <= 1'b0;
+        else state_next <= IDLE;
+
+        // [WEIGHT] Read 1 line from SRAM and write into L0 (write_next = 1)
+        // cascade_L0 = 0
+        // cascade_sysarr = 0
+        // instr_w = 0x01
+        // l0rd = 1 (read_next = 1)
+        // [WEIGHT] Read 1 line from SRAM and write into L0 [Done automatically by l0wr signal]
+        // Pop 1 line from L0 FIFOs into SysArr [Done automatically by l0rd signal]
+        // Repeat prev 2 steps 5 times
+        // Pop 1 line from L0 FIFOs into SysArr
+        // l0rd = 0
+
+        // instr_w = 0x00
+        // Wait 8 cycles.
+        // [OPTIONAL] During this weight, we can prefetch the first line for activations.
+
+        // [ACT] Read 1 line from SRAM and write into L0
+        // cascade_L0 = 1
+        // cascade_sysarr = 1
+        // instr_w = 0x10
+        // l0rd = 1
+        // [ACT] Read 1 line from SRAM and write into L0
+        // Pop 1 line from L0 FIFOs into SysArr [Done automatically by l0rd signal]
+        // Repeat prev 2 steps 14 times
+        // Pop 1 line from L0 FIFOs into SysArr [Done automatically by l0rd signal]
+        // l0rd = 0
+        // If kij index < 8, repeat from the top (kernel loading state)
+
+      WT_LD:
+        if (counter > 'd9) begin
+          read_next     <=  1'b0;
+          state_next    <=  WT_ACT_INTER;
+          counter_next  <=  'd0;
+          in_instr_next <=  2'b00;
+        end else if (counter > 'd8) begin
+          write_next    <=  1'b0;
+          counter_next  <=  counter + 1;
+        end else if (counter > 'd1) begin
+          read_next     <=  1'b1;
+          counter_next  <=  counter + 1;
+        end else begin
+          write_next    <=  1'b1;
+          read_next     <=  1'b0;
+          cascade       <=  1'b0;
+          in_instr_next <=  2'b01;
+          counter_next  <=  counter + 1;
         end
-        else if(counter>'d7)
-        begin
-          state_next<=state;
-          counter_next <= counter+1;
-          in_instr_next <=2'b00;
-          read_next<=1'b0;
+
+      WT_ACT_INTER:
+        if (counter > 'd7) begin
+          state_next    <=  ACT_LD;
+          counter_next  <=  'd0;
+        end else begin
+          counter_next  <=  counter + 1;
         end
-        else
-        begin
-          state_next <= state;
-          counter_next <= counter+1;
-          in_instr_next <= 2'b01;
-          read_next <= 1'b1;
-        end
-      ACT_SR_L0:
-        if(counter>'d15)
-        begin
-          counter_next<=0;
-          state_next<=ACT_L0_MA;
-          write_next <= 1'b0;
-        end
-        else 
-        begin       
-          counter_next<=counter +1;
-          state_next<=state;
-          write_next<=1'b1;
-        end 
-      ACT_L0_MA:
-        if(counter>'d31)
-        begin
-          counter_next<=0;
-          state_next<=ACT_SR_L0;
-          write_next<= 1'b0;
+
+      ACT_LD:
+        if (counter > 'd31) begin
+          counter_next  <=  'd0;
+          state_next    <=  (kij < 'd7) ? WT_LD : WAIT_FOR_NEXT;
           kij_next <= kij=='d8 ? 'd8 : kij+'d1;
+        end else if (counter > 'd23) begin
+          read_next     <=  1'b0;
+          in_instr_next <=  2'b00;
+          counter_next  <=  counter + 1;
+        end else if (counter > 'd15) begin
+          write_next    <=  1'b0;
+          counter_next  <=  counter + 1;
+        end else if (counter > 'd1) begin
+          read_next     <=  1'b1;
+          counter_next  <=  counter + 1;
+        end else begin
+          write_next    <=  1'b1;
+          read_next     <=  1'b0;
+          cascade       <=  1'b1;
+          in_instr_next <=  2'b10;
+          counter_next  <=  counter + 1;
         end
-        else if(counter>'d15)
-        begin
-          state_next<=state;
-          counter_next <= counter+1;
-          in_instr_next<=2'b00;
-          read_next<=1'b0;
-        end
-        else
-        begin
-          state_next<=state;
-          counter_next <= counter+1;
-          in_instr_next<=2'b10;
-          read_next<=1'b1;
-        end
-      // PSUM
+
+      WAIT_FOR_NEXT:
+        counter_next  <=  counter + 1;
 
     endcase
   end
