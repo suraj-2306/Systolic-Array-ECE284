@@ -31,7 +31,7 @@ sram_32b_w128 sram_ininstance (
   .Q(I_Q)
 );
 
-sram_32b_w128 sram_outinstance (
+sram_128b_w16 sram_outinstance (
 	.CLK(clk), 
 	.WEN(MUX_O_WEN), 
 	.CEN(MUX_O_CEN),
@@ -67,13 +67,13 @@ corelet corelet_instance( .clk(clk),
     wire            MUX_I_CEN;
     wire            MUX_I_WEN;
 
-    wire    [31:0]  O_Q;
-    wire    [6:0]   CL_O_A;
+    wire    [127:0]  O_Q;
+    wire    [3:0]   CL_O_A;
     wire            CL_O_CEN;
     wire            CL_O_WEN;
 
-    wire    [31:0]  MUX_O_D;  
-    wire    [6:0]   MUX_O_A;
+    wire    [127:0]  MUX_O_D;  
+    wire    [3:0]   MUX_O_A;
     wire            MUX_O_CEN;
     wire            MUX_O_WEN;
     

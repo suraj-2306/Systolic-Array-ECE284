@@ -7,8 +7,8 @@ module corelet ( input wire clk,
     output          I_CEN,
     output          I_WEN,
 
-    input   [31:0]  O_Q,
-    output  [6:0]   O_A,
+    input   [127:0]  O_Q,
+    output  [3:0]   O_A,
     output          O_CEN,
     output          O_WEN
     // input wire l0rd, input wire l0wr,
@@ -273,10 +273,6 @@ l0 #(
         PSUM_MA_OUT:
           Owrite=0;
 
-
-
-      // PSUM
-
     endcase
   end
  
@@ -288,10 +284,10 @@ l0 #(
   wire [255:0] psums_out[15:0];
 
   generate
-  for(i=0;i<16;i=i+1)begin
+  for(i=0;i<8;i=i+1)begin
   sfu sfu_instance(
    .psums_out(psums_out[i]),
-   .psum_in(ma2of[psum_bw*i+:psum_bw]),
+   .psum_in(ma2of[psum_bw*i +:psum_bw]),
   .valid(mavalid[i]),
   .send_out(send_out), // Rename as needed
 .clk(clk),

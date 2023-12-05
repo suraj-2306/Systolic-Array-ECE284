@@ -149,6 +149,13 @@
       #150 start = 1;
       #10000 ;
 
+    a_file = $fopen("verilog/output.txt", "r");
+
+    // Following three lines are to remove the first three comment lines of the file
+    // a_scan_file = $fscanf(a_file,"%s", captured_data);
+    // a_scan_file = $fscanf(a_file,"%s", captured_data);
+    // a_scan_file = $fscanf(a_file,"%s", captured_data);
+
       I_WEN = 1;
       I_CEN = 1;
       TB_CL_SELECT = 0;
@@ -161,6 +168,7 @@
         O_A   = i;
         a_scan_file = $fscanf(a_file,"%32b", O_D);
         outputSramData[i][127:0] = O_D;
+        $display("%h",O_D);
     end
     #10
     TB_CL_SELECT = 1;
