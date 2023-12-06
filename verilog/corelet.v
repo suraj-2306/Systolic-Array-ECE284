@@ -1,11 +1,16 @@
-//On the other hand, a corelet.v includes all the other blocks (e.g., L0, 2d PE array, ofifo) other than SRAMs. module l0 (clk, in, out, rd, wr, o_full, reset, o_ready);
+
 module corelet ( input wire clk,
     input wire start,
     input wire reset,
     input   [31:0]  I_Q,
     output  [6:0]   I_A,
     output          I_CEN,
-    output          I_WEN
+    output          I_WEN,
+
+    input   [127:0]  O_Q,
+    output  [3:0]   O_A,
+    output          O_CEN,
+    output          O_WEN
     // input wire l0rd, input wire l0wr,
     // input wire [row*bw-1:0] l0in 
 );
@@ -81,19 +86,19 @@ l0 #(
   wire   ofo_ready;
   wire   ofo_valid;
 
-  ofifo #(
-      .bw(bw)
-  ) ofifo_instance (
-      .clk(clk),
-      .in(ma2of),
-      .out(ofout),
-      .rd(ofrd),
-      .wr(ofwr),
-      .o_full(ofo_full),
-      .reset(ofreset),
-      .o_ready(ofo_ready),
-      .o_valid(ofo_valid)
-  );
+  // ofifo #(
+  //     .bw(bw)
+  // ) ofifo_instance (
+  //     .clk(clk),
+  //     .in(ma2of),
+  //     .out(ofout),
+  //     .rd(ofrd),
+  //     .wr(ofwr),
+  //     .o_full(ofo_full),
+  //     .reset(ofreset),
+  //     .o_ready(ofo_ready),
+  //     .o_valid(ofo_valid)
+  // );
 
 
   wire [psum_bw*col-1:0] ma2of;
@@ -119,19 +124,19 @@ l0 #(
 
   genvar i;
 
-  generate
-    for (i = 0; i < col; i = i + 1) begin : col_num
-      sfu sfu_instance (
-          .out(sfuout),
-          .in(ma2of[psum_bw*(i+1)-1:psum_bw*i]),
-          //TODO: Come back to this and change the ma2of if requied
-          .acc(sfuacc),
-          .relu(sfurelu),
-          .clk(clk),
-          .reset(sfureset)
-      );
-    end
-  endgenerate
+  // generate
+  //   for (i = 0; i < col; i = i + 1) begin : col_num
+  //     sfu sfu_instance (
+  //         .out(sfuout),
+  //         .in(ma2of[psum_bw*(i+1)-1:psum_bw*i]),
+  //         //TODO: Come back to this and change the ma2of if requied
+  //         .acc(sfuacc),
+  //         .relu(sfurelu),
+  //         .clk(clk),
+  //         .reset(sfureset)
+  //     );
+  //   end
+  // endgenerate
 
   //Controller state 
   localparam IDLE = 4'b0000;
@@ -143,6 +148,7 @@ l0 #(
   localparam WT_ACT_INTER = 4'b0010;
   localparam ACT_LD= 4'b0011;
   localparam WAIT_FOR_NEXT= 4'b0100;
+  localparam PSUM_MA_OUT= 4'b0101;
 
   reg [6:0] counter;
   reg [3:0] state;
@@ -251,7 +257,7 @@ l0 #(
           counter_next  <=  counter + 1;
         end
 
-      ACT_LD:
+      ACT_LD: //YJ // Add inter-cycle buffers (between activation input end and weight load beginning)
         if (counter > 'd31) begin
           counter_next  <=  'd0;
           state_next    <=  (kij < 'd7) ? WT_LD : WAIT_FOR_NEXT;
@@ -276,7 +282,27 @@ l0 #(
 
       WAIT_FOR_NEXT:
         counter_next  <=  counter + 1;
+        Owrite=0;
 
     endcase
   end
+ 
+  reg Owrite;
+        assign O_CEN = Owrite;
+        assign O_WEN = 1'b0;
+  reg send_out=0;
+  wire [15:0]output_port0;
+  wire [255:0] psums_out[15:0];
+
+  generate
+  for(i=0;i<8;i=i+1)begin
+  sfu sfu_instance(
+   .psums_out(psums_out[i]),
+   .psum_in(ma2of[psum_bw*i +:psum_bw]),
+  .valid(mavalid[i]),
+  .send_out(send_out), // Rename as needed
+.clk(clk),
+  .reset(reset));
+end
+endgenerate
 endmodule

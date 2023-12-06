@@ -27,26 +27,51 @@ module sfu (
   always @(posedge clk or posedge reset) begin
     if (reset) begin
       // Reset all the psum regs to zero
-      for (j=0; j < input_ch; j=j+1) begin
-        reg_bank[j] = 0;
-      end
+      reg_bank[0] = 0;
+      reg_bank[1] = 0;
+      reg_bank[2] = 0;
+      reg_bank[3] = 0;
+      reg_bank[4] = 0;
+      reg_bank[5] = 0;
+      reg_bank[6] = 0;
+      reg_bank[7] = 0;
+      reg_bank[8] = 0;
+      reg_bank[9] = 0;
+      reg_bank[10] = 0;
+      reg_bank[11] = 0;
+      reg_bank[12] = 0;
+      reg_bank[13] = 0;
+      reg_bank[14] = 0;
+      reg_bank[15] = 0;
       psums_out_reg = 0;
     end
 
     else if (valid) begin
-      reg_bank[i] =  reg_bank[i] + psum_in;
+      reg_bank[i] <=  reg_bank[i] + psum_in;
       if(i == (input_ch - 1))
-        i = 0;
+        i <= 0;
       else
-        i = i + 1;
+        i <= i + 1;
     end
 
     if (send_out) begin
-      for (i=0; i<input_ch; i=i+1) begin
-        psums_out_reg[psum_bw*i +: psum_bw] = (reg_bank[i] > 0) ? reg_bank[i] : 0;
-      end
+      psums_out_reg[psum_bw*0 +: psum_bw] = reg_bank[0] ;
+      psums_out_reg[psum_bw*1 +: psum_bw] = reg_bank[1] ;
+      psums_out_reg[psum_bw*2 +: psum_bw] = reg_bank[2] ;
+      psums_out_reg[psum_bw*3 +: psum_bw] = reg_bank[3] ;
+      psums_out_reg[psum_bw*4 +: psum_bw] = reg_bank[4] ;
+      psums_out_reg[psum_bw*5 +: psum_bw] = reg_bank[5] ;
+      psums_out_reg[psum_bw*6 +: psum_bw] = reg_bank[6] ;
+      psums_out_reg[psum_bw*7 +: psum_bw] = reg_bank[7] ;
+      psums_out_reg[psum_bw*8 +: psum_bw] = reg_bank[8] ;
+      psums_out_reg[psum_bw*9 +: psum_bw] = reg_bank[9] ;
+      psums_out_reg[psum_bw*10 +: psum_bw] = reg_bank[10] ;
+      psums_out_reg[psum_bw*11 +: psum_bw] = reg_bank[11] ;
+      psums_out_reg[psum_bw*12 +: psum_bw] = reg_bank[12] ;
+      psums_out_reg[psum_bw*13 +: psum_bw] = reg_bank[13] ;
+      psums_out_reg[psum_bw*14 +: psum_bw] = reg_bank[14] ;
+      psums_out_reg[psum_bw*15 +: psum_bw] = reg_bank[15] ;
     end
   end
-
 endmodule
 

@@ -12,6 +12,7 @@
 ./verilog/ofifo.v
 ./verilog/corelet.v
 ./verilog/core.v
-./verilog/sfu.v
+./verilog/sfu1.v
 ./verilog/core_tb.v
 ./verilog/sram_32b_w128.v
+./verilog/sram_128b_w16.v

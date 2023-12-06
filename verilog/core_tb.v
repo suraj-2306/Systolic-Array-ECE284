@@ -1,4 +1,5 @@
-module core_tb;
+
+  module core_tb;
 
   reg clk;
   reg reset;
@@ -20,6 +21,13 @@ module core_tb;
   reg I_WEN;
   reg [31:0] inputSramData[108:0];
 
+  wire [31:0] O_Q;
+  reg [6:0] O_A;
+  logic [31:0] O_D;
+  reg O_CEN;
+  reg O_WEN;
+  reg [127:0] outputSramData[15:0];
+
   reg TB_CL_SELECT = 0;
   integer w_file, w_scan_file;  // file_handler
   integer a_file, a_scan_file;  // file_handler
@@ -27,7 +35,6 @@ module core_tb;
   integer i, j;
   integer captured_data;
   integer error = 0;
-
 
   core core_instance (
       .clk  (clk),
@@ -38,7 +45,13 @@ module core_tb;
       .TB_I_A(I_A),
       .TB_I_D(I_D),
       .TB_I_Q(I_Q),
-      .TB_I_WEN(I_WEN)
+      .TB_I_WEN(I_WEN),
+
+      .TB_O_CEN(O_CEN),
+      .TB_O_A(O_A),
+      .TB_O_D(O_D),
+      .TB_O_Q(O_Q),
+      .TB_O_WEN(O_WEN)
   );
 
   initial begin
@@ -60,6 +73,8 @@ module core_tb;
     #10 I_CEN = 0;
     I_WEN = 0;
     TB_CL_SELECT = 1;
+    O_CEN = 1;
+    O_WEN = 1;
 
     reset = 0;
     clk = 0;
@@ -132,12 +147,49 @@ module core_tb;
 
     // end
       #150 start = 1;
+      #10000 ;
 
-      TB_CL_SELECT = 0;
+    a_file = $fopen("verilog/output.txt", "r");
+
+    // Following three lines are to remove the first three comment lines of the file
+    // a_scan_file = $fscanf(a_file,"%s", captured_data);
+    // a_scan_file = $fscanf(a_file,"%s", captured_data);
+    // a_scan_file = $fscanf(a_file,"%s", captured_data);
+
       I_WEN = 1;
       I_CEN = 1;
+      TB_CL_SELECT = 0;
+    O_CEN = 0;
+    O_WEN = 0;
 
-      #10000 $finish;
+    for (i=0; i<16 ; i=i+1)
+    begin
+        #10
+        O_A   = i;
+        a_scan_file = $fscanf(a_file,"%32b", O_D);
+        outputSramData[i][127:0] = O_D;
+        $display("%h",O_D);
+    end
+    #10
+    TB_CL_SELECT = 1;
+    O_CEN = 1;
+    O_WEN = 1;
+    for (i=0; i<16; i=i+1)
+    begin
+        #5
+        O_CEN = 0;
+        O_WEN = 1;
+        O_A = i;
+        #5
+        if (outputSramData[i][127:0] == O_Q)
+            $display("%2d-th read data is %h --- Data matched", i, O_Q);
+        else begin
+            $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, O_Q, outputSramData[i]);
+            error = error+1;
+        end
+    end
+
+    #1000 $finish;
     end
 
   initial begin
