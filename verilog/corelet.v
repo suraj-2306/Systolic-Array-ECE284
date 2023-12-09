@@ -56,7 +56,7 @@ module corelet ( input wire clk,
   // L0 Reg/Wires
   reg L0_WRITE;                     // L0 Write signal
   reg L0_READ;                      // L0 Read signal
-  wire [bw*row-1:0] L0_MA;        // Wire connection between L0 Data out and MAC Array
+  wire [bw*row-1:0] L0_MA;          // Wire connection between L0 Data out and MAC Array
   wire L0_FULL;                     // Wire out for L0 Full signal
   wire L0_READY;                    // Wire out for L0 Ready signal
 
@@ -74,11 +74,11 @@ module corelet ( input wire clk,
   wire [psum_bw*col-1:0] MA_OUT_S;  // MAC Array South output
   wire [col-1:0] MA_VALID;          // MAC Array Valid output
 
-  reg Owrite;
   reg SFU_EN;                       // Enable SFU
   reg SFU_OUT_EN;                   // SFU output enable
-  // YJ // Find a better way to do this psums handling
-  wire [255:0] SFU_PSUMS_OUT[15:0]; // SFU partial sums output
+  wire [127:0] SFU_PSUMS_OUT;       // SFU partial sums output
+
+  reg O_write;
 
   genvar i;
 
@@ -111,7 +111,7 @@ module corelet ( input wire clk,
   generate
     for (i=0; i<8; i=i+1) begin
       sfu sfu_instance(
-        .psums_out(SFU_PSUMS_OUT[i]),
+        .psum_out(SFU_PSUMS_OUT[psum_bw*i +: psum_bw]),
         .psum_in(MA_OUT_S[psum_bw*i +:psum_bw]),
         .valid(MA_VALID[i]),
         .enable(SFU_EN),
@@ -147,8 +147,9 @@ module corelet ( input wire clk,
   assign I_CEN = !L0_write_next;  // Enable ISRAM only when we are reading in next cycle
   assign I_WEN = 1'b1;            // Hardcode ISRAM to Read-only
 
-  assign O_CEN = Owrite;
-  assign O_WEN = 1'b0;
+  assign O_D = SFU_PSUMS_OUT;     // PSum output from SFUs routed to OSRAM Data In
+  assign O_CEN = !O_write;        // OSRAM enable signal (active low)
+  assign O_WEN = 1'b0;            // Hardcode OSRAM to Write-only
 
   always @(posedge clk or posedge reset) begin
     if(reset) begin
@@ -160,6 +161,7 @@ module corelet ( input wire clk,
       MA_INSTR_IN <= 'd0;
       SFU_EN      <= 'd0;
       SFU_OUT_EN  <= 'd0;
+      O_write     <= 'd0;
     end
     else begin
       // YJ // Do we need these delayed signals?
@@ -181,6 +183,7 @@ module corelet ( input wire clk,
 
       SFU_EN      <= SFU_enable_next;
       SFU_OUT_EN  <= SFU_out_en_next;
+
     end
   end
 
@@ -188,6 +191,11 @@ module corelet ( input wire clk,
     if (!reset) begin
       L0_READ     <= L0_read_next;
       MA_INSTR_IN <= MA_instr_in_next;
+
+      if (SFU_OUT_EN)
+        O_write <= 'b1;   // Copy accumulated PSUMS into OSRAM
+      else
+        O_write <= 'b0;
     end
   end
 
