@@ -7,10 +7,12 @@ module corelet ( input wire clk,
     output          I_CEN,    // ISRAM Chip-enable
     output          I_WEN,    // ISRAM Write-enable (to select betweek Read/Write)
 
-    input   [127:0] O_Q,      // OSRAM Data Output
+    output  [127:0] O_D,      // OSRAM Data Input
     output  [3:0]   O_A,      // OSRAM Address
     output          O_CEN,    // OSRAM Chip-enable
-    output          O_WEN     // OSRAM Write-enable (to select betweek Read/Write)
+    output          O_WEN,    // OSRAM Write-enable (to select betweek Read/Write)
+
+    output  ready             // Core operation complete. Data is ready in OSRAM.
 
     // YJ // Add a connection from SFU to OSRAM
     // Add an output to signal computation complete
@@ -36,8 +38,8 @@ module corelet ( input wire clk,
   localparam WT_LD = 4'b0001;
   localparam WT_ACT_INTER = 4'b0010;
   localparam ACT_LD= 4'b0011;
-  localparam WAIT_FOR_NEXT= 4'b0100;
-  localparam PSUM_MA_OUT= 4'b0101;
+  localparam PSUMS_OSRAM_WR= 4'b0100;
+  localparam WAIT_FOR_NEXT= 4'b0101;
 
   // State machine
   reg cascade;                      // Cascade operation mode toggle
@@ -48,6 +50,8 @@ module corelet ( input wire clk,
   reg L0_write_next;                // Value written into L0 Write signal in next clk cycle
   reg L0_read_next;                 // Value written into L0 Write signal in next clk cycle
   reg [1:0] MA_instr_in_next;       // Value written into MAC Array Instruction In (W) in next cycle
+  reg SFU_enable_next;              // Value written into SFU Enable in next cycle
+  reg SFU_out_en_next;              // Value written into SFU Output Enable in next cycle
 
   // L0 Reg/Wires
   reg L0_WRITE;                     // L0 Write signal
@@ -71,6 +75,7 @@ module corelet ( input wire clk,
   wire [col-1:0] MA_VALID;          // MAC Array Valid output
 
   reg Owrite;
+  reg SFU_EN;                       // Enable SFU
   reg SFU_OUT_EN;                   // SFU output enable
   // YJ // Find a better way to do this psums handling
   wire [255:0] SFU_PSUMS_OUT[15:0]; // SFU partial sums output
@@ -109,6 +114,7 @@ module corelet ( input wire clk,
         .psums_out(SFU_PSUMS_OUT[i]),
         .psum_in(MA_OUT_S[psum_bw*i +:psum_bw]),
         .valid(MA_VALID[i]),
+        .enable(SFU_EN),
         .out_en(SFU_OUT_EN),
         .clk(clk),
         .reset(reset));
@@ -152,6 +158,8 @@ module corelet ( input wire clk,
       L0_READ     <= 'd0;
       kij         <= 'd0;
       MA_INSTR_IN <= 'd0;
+      SFU_EN      <= 'd0;
+      SFU_OUT_EN  <= 'd0;
     end
     else begin
       // YJ // Do we need these delayed signals?
@@ -170,6 +178,9 @@ module corelet ( input wire clk,
       SM_counter_next <= SM_counter;
 
       L0_WRITE    <= L0_write_next;
+
+      SFU_EN      <= SFU_enable_next;
+      SFU_OUT_EN  <= SFU_out_en_next;
     end
   end
 
@@ -199,6 +210,7 @@ module corelet ( input wire clk,
           SM_state_next   <= WT_LD;
           SM_counter_next <= 'd0;   // Initialise to 0 when start
           kij_next    <= 'd0;       // Initialise to 0 when start
+          SFU_enable_next <= 'd0;
         end
         else SM_state_next <= IDLE;
 
@@ -214,27 +226,29 @@ module corelet ( input wire clk,
       // l0rd = 0
       WT_LD:
         if (SM_counter > 'd8) begin
+          // All weights have been provided to the SysArr.
+          // Set instr to 0x00 (NOP)
           L0_read_next     <=  1'b0;
           SM_state_next    <=  WT_ACT_INTER;
           SM_counter_next  <=  'd0;
           MA_instr_in_next <=  2'b00;
         end else if (SM_counter > 'd7) begin
+          // All weights have been loaded into L0 already
+          // Disable writing into L0
           L0_write_next    <=  1'b0;
-          // Ideally we should disable L0_read in the next clk
-          // but there is a delay of 1 cycle in rd signal being propagated,
-          // so we disable it now.
-          // L0_read_next     <=  1'b0;
           SM_counter_next  <=  SM_counter + 1;
         end else if (SM_counter > 'd0) begin
+          // First weight has been loaded into L0.
+          // Enable reading from L0
+          // Set instr to 0x01 (load)
           L0_read_next     <=  1'b1;
           MA_instr_in_next <= 2'b01;
           SM_counter_next  <=  SM_counter + 1;
         end else begin
+          // Initialize state
+          // Enable writing to L0
+          // Disable cascade and reading from L0
           L0_write_next    <= 1'b1;
-          // Ideally we should enable L0_read in the next clk
-          // but there is a delay of 1 cycle in rd signal being propagated,
-          // so we enable it now.
-          // L0_read_next     <= 1'b1;
           L0_read_next     <= 1'b0;
           cascade          <= 1'b0;
           SM_counter_next  <= SM_counter + 1;
@@ -246,9 +260,13 @@ module corelet ( input wire clk,
       // [OPTIONAL] During this weight, we can prefetch the first line for activations.
       WT_ACT_INTER:
         if (SM_counter > 'd6) begin
+          // Weights have been loaded into the SysArr PEs
+          // Move on to supplying the activations in the next state
           SM_state_next    <=  ACT_LD;
           SM_counter_next  <=  'd0;
         end else begin
+          // Initialize state
+          // Wait for a total of 8 cycles
           SM_counter_next  <=  SM_counter + 1;
           SM_state_next    <= SM_state;
         end
@@ -266,33 +284,56 @@ module corelet ( input wire clk,
       // If kij index < 8, repeat from the top (kernel loading state)
       ACT_LD: //YJ // Add inter-cycle buffers (between activation input end and weight load beginning)
         if (SM_counter > 'd30) begin
+          // Activations/PSums have been calculated
+          // YJ // Disable SFU to avoid any accidental overwrites. Here or 1 cycle later?
+          // YJ // Reset MAC Array to clear all weights?
+          // Move to next step
+          SFU_enable_next  <= 'd0;
           SM_counter_next  <=  'd0;
-          SM_state_next    <=  (kij < 'd7) ? WT_LD : WAIT_FOR_NEXT;
+          SM_state_next    <=  (kij < 'd7) ? WT_LD : PSUMS_OSRAM_WR;
           kij_next <= kij=='d8 ? 'd8 : kij+'d1;
         end else if (SM_counter > 'd22) begin
-          // L0_read_next     <=  1'b0;
+          // All activations have been provided to the SysArr.
+          // Wait for execution to complete.
+          L0_read_next     <=  1'b0;
+          SM_counter_next  <=  SM_counter + 1;
+        end else if (SM_counter > 'd15) begin
+          // Set instr to 0x00 (NOP, will be cascaded as required)
+          // Delayed by 1 cycle because this is propagated at falling edge
           MA_instr_in_next <=  2'b00;
           SM_counter_next  <=  SM_counter + 1;
         end else if (SM_counter > 'd14) begin
+          // All activations have been loaded into L0 already
+          // Disable writing into L0
           L0_write_next    <=  1'b0;
-          // Ideally we should disable L0_read in the next clk
-          // but there is a delay of 1 cycle in rd signal being propagated,
-          // so we disable it now.
-          L0_read_next     <=  1'b0;
           SM_counter_next  <=  SM_counter + 1;
         end else if (SM_counter > 'd0) begin
-          // L0_read_next     <=  1'b1;
-          SM_counter_next  <=  SM_counter + 1;
-        end else begin
-          L0_write_next    <=  1'b1;
-          // Ideally we should enable L0_read in the next clk
-          // but there is a delay of 1 cycle in rd signal being propagated,
-          // so we enable it now.
-          L0_read_next     <= 1'b1;
-          cascade          <=  1'b1;
+          // First activation has been loaded into L0.
+          // Enable reading from L0
+          // Set instr to 0x10 (execute)
+          L0_read_next     <=  1'b1;
           MA_instr_in_next <=  2'b10;
           SM_counter_next  <=  SM_counter + 1;
+        end else begin
+          // Initialise state.
+          // Enable cascade and writing to L0
+          // Enable SFU. Will be active only when it gets an active signal from MAC Array
+          L0_write_next    <=  1'b1;
+          cascade          <=  1'b1;
+          SFU_enable_next  <= 'd1;
+          SM_counter_next  <=  SM_counter + 1;
           SM_state_next    <= SM_state;
+        end
+
+      PSUMS_OSRAM_WR:
+        if (SM_counter > 'd15) begin
+          SFU_out_en_next <= 'b0;
+          SM_counter_next <= 'd0;
+          SM_state_next   <= WAIT_FOR_NEXT;
+        end
+        else begin
+          SFU_out_en_next <= 'b1;
+          SM_counter_next <= SM_counter + 1;
         end
 
       WAIT_FOR_NEXT:

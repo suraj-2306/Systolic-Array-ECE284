@@ -3,6 +3,7 @@ module sfu (
   output  [psum_bw*input_ch-1:0] psums_out,
   input signed  [psum_bw-1:0] psum_in,
   input   valid,
+  input   enable,
   input   out_en,
   input   clk,
   input   reset
@@ -47,7 +48,7 @@ module sfu (
       psums_out_reg = 0;
     end
 
-    else if (valid) begin
+    else if (valid & enable) begin
       reg_bank[i] <=  reg_bank[i] + psum_in;
       if(i == (input_ch - 1))
         i <= 0;

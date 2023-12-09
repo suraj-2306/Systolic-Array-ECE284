@@ -22,6 +22,8 @@ module core_tb;
   reg reset;
   reg start;
 
+  wire output_ready;
+
   wire [isram_bw-1:0] I_Q;    // Input sent to ISRAM (Input SRAM)
   reg [6:0] I_A;              // Address of input sent to SRAM
   logic [isram_bw-1:0] I_D;   // Input value read from txt file (activation and weight)
@@ -55,6 +57,7 @@ module core_tb;
     .clk  (clk),
     .start(start),
     .reset(reset),
+    .ready(output_ready),
     .TB_CL_SELECT(TB_CL_SELECT),
     .TB_I_CEN(I_CEN),
     .TB_I_A(I_A),
