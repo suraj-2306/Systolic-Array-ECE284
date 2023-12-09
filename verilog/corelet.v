@@ -2,17 +2,17 @@
 module corelet ( input wire clk,
     input wire start,
     input wire reset,
-    input   [31:0]  I_Q,
-    output  [6:0]   I_A,
-    output          I_CEN,
-    output          I_WEN,
+    input   [31:0]  I_Q,      // ISRAM Data Output
+    output  [6:0]   I_A,      // ISRAM Address
+    output          I_CEN,    // ISRAM Chip-enable
+    output          I_WEN,    // ISRAM Write-enable (to select betweek Read/Write)
 
-    input   [127:0]  O_Q,
-    output  [3:0]   O_A,
-    output          O_CEN,
-    output          O_WEN
+    input   [127:0] O_Q,      // OSRAM Data Output
+    output  [3:0]   O_A,      // OSRAM Address
+    output          O_CEN,    // OSRAM Chip-enable
+    output          O_WEN     // OSRAM Write-enable (to select betweek Read/Write)
     // input wire l0rd, input wire l0wr,
-    // input wire [row*bw-1:0] l0in 
+    // input wire [row*bw-1:0] l0in
 );
 
   parameter col = 8;

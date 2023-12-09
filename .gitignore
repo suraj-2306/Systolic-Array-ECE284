@@ -1,2 +1,3 @@
 .ipynb_checkpoints
-verilog/a.out
+*.out
+*.vcd

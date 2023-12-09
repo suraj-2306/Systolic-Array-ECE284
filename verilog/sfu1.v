@@ -1,3 +1,4 @@
+
 module sfu (
   output  [psum_bw*input_ch-1:0] psums_out,
   input signed  [psum_bw-1:0] psum_in,
