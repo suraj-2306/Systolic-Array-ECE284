@@ -3,7 +3,7 @@ module sfu (
   output  [psum_bw*input_ch-1:0] psums_out,
   input signed  [psum_bw-1:0] psum_in,
   input   valid,
-  input   send_out, // Rename as needed
+  input   out_en,
   input   clk,
   input   reset
   );
@@ -55,7 +55,7 @@ module sfu (
         i <= i + 1;
     end
 
-    if (send_out) begin
+    if (out_en) begin
       psums_out_reg[psum_bw*0 +: psum_bw] = reg_bank[0] ;
       psums_out_reg[psum_bw*1 +: psum_bw] = reg_bank[1] ;
       psums_out_reg[psum_bw*2 +: psum_bw] = reg_bank[2] ;

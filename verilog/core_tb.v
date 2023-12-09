@@ -76,8 +76,12 @@ module core_tb;
     $dumpvars(0, core_tb);
 
     clk = 0;
-    reset = 1;
+    reset = 0;
     start = 0;
+
+    // Perform global reset
+    #4 reset = 1;
+    #4 reset = 0;
 
     // ---------- Open weight.txt file for reading ----------
     w_file = $fopen("./verilog/weight.txt", "r");
@@ -87,7 +91,7 @@ module core_tb;
     w_scan_file = $fscanf(w_file, "%s", captured_data);
     w_scan_file = $fscanf(w_file, "%s", captured_data);
 
-    #10
+    #12
     // Give SRAM control to testbench. reset reset and clk.
     TB_CL_SELECT = 1; reset = 0;  clk = 0;
 
@@ -96,8 +100,6 @@ module core_tb;
     I_CEN = 0;  I_WEN = 0;
     // Disable OSRAM
     O_CEN = 1;  O_WEN = 1;
-    #1 reset = 1;
-    #1 reset = 0;
     for (j = 0; j < (num_ip_ch*len_kij); j = j + 1) begin
       // Give ISRAM address to write to
       #10 I_A = j;

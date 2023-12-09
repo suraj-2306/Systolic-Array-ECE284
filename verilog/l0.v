@@ -1,3 +1,8 @@
+/** Notes:
+  * L0 needs an additional clock cycle for the last written value to be stored in the FIFOs
+  *
+  */
+
 module l0 (clk, in, out, rd, wr, o_full, reset, o_ready, cascade);
 
   parameter row  = 8;
