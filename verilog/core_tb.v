@@ -110,7 +110,7 @@ module core_tb;
     // ---------- Verify weights read into SRAM ----------
     $display("Verify weights read into SRAM");
     // Enable ISRAM for reading
-    #10 I_CEN = 0; I_WEN = 1;
+    #11 I_CEN = 0; I_WEN = 1;
     error = 0;
     for (i = 0; i < (num_ip_ch*len_kij); i = i + 1) begin
       // Give ISRAM address to read from
@@ -160,6 +160,9 @@ module core_tb;
     $display("Verify activations read into SRAM");
     // Enable ISRAM for reading
     #10 I_CEN = 0; I_WEN = 1;
+    // Disable OSRAM
+    O_CEN = 1;  O_WEN = 1;
+    TB_CL_SELECT = 1;
     error = 0;
     for (i=0; i<len_nij ; i=i+1) begin
       // Give ISRAM address to read from (offset by number of kernel elements)
@@ -198,6 +201,11 @@ module core_tb;
 
     // We do not need to control the OSRAM at this instant. Just read from the
     // file and store into our local var for comparision.
+    // Disable ISRAM
+    I_CEN = 1; I_WEN = 1;
+    // Disable OSRAM
+    O_CEN = 1;  O_WEN = 1;
+    TB_CL_SELECT = 0;
     for (i=0; i<len_onij ; i=i+1) begin
       #10 O_A   = i;
       a_scan_file = $fscanf(a_file,"%32b", O_D);
@@ -229,6 +237,8 @@ module core_tb;
       // end
     end
     $display("Encountered %d error(s)", error);
+    // Disable OSRAM
+    #10 O_CEN = 1; O_WEN = 1;
 
     #1000 $finish;
   end
