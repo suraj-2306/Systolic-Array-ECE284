@@ -44,6 +44,8 @@ module corelet ( input wire clk,
   // State machine
   reg cascade;                      // Cascade operation mode toggle
   reg SM_ready;                     // State Machine oujtput ready signal
+  reg SM_reset_ma;                  // State machine reset Mac Array signal
+  reg SM_reset_ma_next;             // Value weitten into state machine reset mac array in next clk cycle
   reg [6:0] SM_counter;             // State machine internal counter
   reg [6:0] SM_counter_next;        // Value written into state machine internal counter in next clk cycle
   reg [3:0] SM_state;               // State machine 'State'
@@ -102,7 +104,7 @@ module corelet ( input wire clk,
 
   mac_array mac_array_instance (
       .clk(clk),
-      .reset(reset),
+      .reset(SM_reset_ma),
       .out_s(MA_OUT_S),
       .in_w(L0_MA),
       .in_n(128'b0),
@@ -168,7 +170,9 @@ module corelet ( input wire clk,
       SFU_EN      <= 'd0;
       SFU_OUT_EN  <= 'd0;
       O_write     <= 'd0;
-      SM_ready <='d0;
+      SM_ready    <= 'd0;
+      SM_reset_ma <= 'd1;
+      SM_reset_ma_next <= 'd0;
     end
     else begin
       // YJ // Do we need these delayed signals?
@@ -190,6 +194,8 @@ module corelet ( input wire clk,
 
       SFU_EN      <= SFU_enable_next;
       SFU_OUT_EN  <= SFU_out_en_next;
+
+      SM_reset_ma <= SM_reset_ma_next;
 
     end
   end
@@ -226,6 +232,7 @@ module corelet ( input wire clk,
           SM_counter_next <= 'd0;   // Initialise to 0 when start
           kij_next    <= 'd0;       // Initialise to 0 when start
           SFU_enable_next <= 'd0;
+          SM_reset_ma_next  <= 'd1; // Keep MAC Array reset till we begin operation
         end
         else SM_state_next <= IDLE;
 
@@ -266,6 +273,7 @@ module corelet ( input wire clk,
           L0_write_next    <= 1'b1;
           L0_read_next     <= 1'b0;
           cascade          <= 1'b0;
+          SM_reset_ma_next <= 'd0;  // Enable MAC Array before we begin loading weights
           SM_counter_next  <= SM_counter + 1;
           SM_state_next    <= SM_state;
         end
@@ -307,6 +315,7 @@ module corelet ( input wire clk,
           SM_counter_next  <=  'd0;
           SM_state_next    <=  (kij < 'd7) ? WT_LD : PSUMS_OSRAM_WR;
           kij_next <= kij=='d8 ? 'd8 : kij+'d1;
+          SM_reset_ma_next <= 'd1;
         end else if (SM_counter > 'd22) begin
           // All activations have been provided to the SysArr.
           // Wait for execution to complete.

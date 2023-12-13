@@ -1,6 +1,6 @@
 // Created by prof. Mingu Kang @VVIP Lab in UCSD ECE department
 // Please do not spread this code without permission 
-module mac_array (clk, reset, out_s, in_w, in_n, inst_w, valid);
+module mac_array (clk, reset, out_s, in_w, in_n, inst_w, valid, cascade);
 
   parameter bw = 4;
   parameter psum_bw = 16;
@@ -13,6 +13,7 @@ module mac_array (clk, reset, out_s, in_w, in_n, inst_w, valid);
   input  [1:0] inst_w;
   input  [psum_bw*col-1:0] in_n;
   output [col-1:0] valid;
+  input  cascade;
 
 
   reg    [2*row-1:0] inst_w_temp;
@@ -42,13 +43,13 @@ module mac_array (clk, reset, out_s, in_w, in_n, inst_w, valid);
 
     //valid <= valid_temp[row*col-1:row*col-8];
     inst_w_temp[1:0]   <= inst_w; 
-    inst_w_temp[3:2]   <= inst_w_temp[1:0]; 
-    inst_w_temp[5:4]   <= inst_w_temp[3:2]; 
-    inst_w_temp[7:6]   <= inst_w_temp[5:4]; 
-    inst_w_temp[9:8]   <= inst_w_temp[7:6]; 
-    inst_w_temp[11:10] <= inst_w_temp[9:8]; 
-    inst_w_temp[13:12] <= inst_w_temp[11:10]; 
-    inst_w_temp[15:14] <= inst_w_temp[13:12]; 
+    inst_w_temp[3:2]   <= cascade ? inst_w_temp[1:0] : inst_w;
+    inst_w_temp[5:4]   <= cascade ? inst_w_temp[3:2] : inst_w;
+    inst_w_temp[7:6]   <= cascade ? inst_w_temp[5:4] : inst_w;
+    inst_w_temp[9:8]   <= cascade ? inst_w_temp[7:6] : inst_w;
+    inst_w_temp[11:10] <= cascade ? inst_w_temp[9:8] : inst_w;
+    inst_w_temp[13:12] <= cascade ? inst_w_temp[11:10] : inst_w;
+    inst_w_temp[15:14] <= cascade ? inst_w_temp[13:12] : inst_w;
   end
 
 
