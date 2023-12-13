@@ -58,7 +58,7 @@ module sfu (
     end
 
     if (out_en) begin
-      psum_out_reg = reg_bank[out_ptr];
+      psum_out_reg = (reg_bank[out_ptr] > 0) ? reg_bank[out_ptr] : 0;
       if(out_ptr == (input_ch - 1))
         out_ptr <= 0;
       else
