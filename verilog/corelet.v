@@ -70,6 +70,8 @@ module corelet ( input wire clk,
   logic [6:0] WEIGHT_ADDR;          // Kernel element address (to be loaded next)
   logic [6:0] AW_ADDR_MUX;          // Multiplexed ISRAM Address
 
+  logic [3:0] O_ADDR_MUX;          // Multiplexed OSRAM Address
+
   reg [1:0] MA_INSTR_IN;            // MAC Array Instruction In (West)
   wire [psum_bw*col-1:0] MA_OUT_S;  // MAC Array South output
   wire [col-1:0] MA_VALID;          // MAC Array Valid output
@@ -147,6 +149,7 @@ module corelet ( input wire clk,
   assign I_CEN = !L0_write_next;  // Enable ISRAM only when we are reading in next cycle
   assign I_WEN = 1'b1;            // Hardcode ISRAM to Read-only
 
+  assign O_A = O_ADDR_MUX;
   assign O_D = SFU_PSUMS_OUT;     // PSum output from SFUs routed to OSRAM Data In
   assign O_CEN = !O_write;        // OSRAM enable signal (active low)
   assign O_WEN = 1'b0;            // Hardcode OSRAM to Write-only
@@ -340,6 +343,7 @@ module corelet ( input wire clk,
           SM_state_next   <= WAIT_FOR_NEXT;
         end
         else begin
+          O_ADDR_MUX = SM_counter;
           SFU_out_en_next <= 'b1;
           SM_counter_next <= SM_counter + 1;
         end
