@@ -341,11 +341,15 @@ module corelet ( input wire clk,
         end
         else begin
           SFU_out_en_next <= 'b1;
+          SM_state_next   <= SM_state;
           SM_counter_next <= SM_counter + 1;
         end
 
       WAIT_FOR_NEXT:
-        SM_counter_next  <=  SM_counter + 1;
+        begin
+          SM_counter_next  <=  SM_counter + 1;
+          SM_state_next   <= SM_state;
+        end
         // SM_state_next    <= SM_state;
 
         // Owrite <= 0;
