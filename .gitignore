@@ -1,2 +1,3 @@
 .ipynb_checkpoints
-a.out
+*.out
+*.vcd

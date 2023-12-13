@@ -1,3 +1,4 @@
+
 module mac_row (clk, out_s, in_w, in_n, valid, inst_w, reset);
 
   parameter bw = 4;

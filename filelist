@@ -4,14 +4,15 @@
 ./verilog/fifo_mux_2_1.v
 ./verilog/fifo_mux_16_1.v
 ./verilog/fifo_mux_8_1.v
- ./verilog/mac.v
- ./verilog/mac_tile.v
- ./verilog/mac_array.v
- ./verilog/mac_row.v
+./verilog/mac.v
+./verilog/mac_tile.v
+./verilog/mac_array.v
+./verilog/mac_row.v
 ./verilog/l0.v
 ./verilog/ofifo.v
 ./verilog/corelet.v
 ./verilog/core.v
-./verilog/sfu.v
+./verilog/sfu1.v
 ./verilog/core_tb.v
 ./verilog/sram_32b_w128.v
+./verilog/sram_128b_w16.v
