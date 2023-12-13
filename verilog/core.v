@@ -12,11 +12,11 @@ module core(
   input           TB_I_WEN,   // ISRAM Write-enable (to select betweek Read/Write)
   output  [31:0]  TB_I_Q,     // ISRAM Data output (read from ISRAM)
 
-  input   [31:0]  TB_O_D,     // OSRAM Data input (to write into OSRAM)
+  input   [127:0]  TB_O_D,     // OSRAM Data input (to write into OSRAM)
   input   [6:0]   TB_O_A,     // OSRAM Address
   input           TB_O_CEN,   // OSRAM Chip-enable
   input           TB_O_WEN,   // OSRAM Write-enable (to select betweek Read/Write)
-  output  [31:0]  TB_O_Q      // OSRAM Data output (read from OSRAM)
+  output  [127:0]  TB_O_Q      // OSRAM Data output (read from OSRAM)
 );
 
   // ---------- Parameters definition ----------

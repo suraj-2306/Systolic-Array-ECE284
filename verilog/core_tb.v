@@ -29,9 +29,9 @@ module core_tb;
   logic [isram_bw-1:0] I_D;   // Input value read from txt file (activation and weight)
 
   // YJ // There is a mismatch of bitwidths here!
-  wire [31:0] O_Q;            // Output read from OSRAM (Output SRAM)
+  wire [127:0] O_Q;            // Output read from OSRAM (Output SRAM)
   reg [6:0] O_A;              // Address of output val read from txt file
-  logic [31:0] O_D;           // Output value read from txt file
+  logic [127:0] O_D;           // Output value read from txt file
 
   reg I_CEN;                  // ISRAM Chip-enable
   reg I_WEN;                  // ISRAM Write-enable
