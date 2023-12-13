@@ -43,10 +43,11 @@ module corelet ( input wire clk,
 
   // State machine
   reg cascade;                      // Cascade operation mode toggle
+  reg SM_ready;                     // State Machine oujtput ready signal
   reg [6:0] SM_counter;             // State machine internal counter
+  reg [6:0] SM_counter_next;        // Value written into state machine internal counter in next clk cycle
   reg [3:0] SM_state;               // State machine 'State'
   reg [3:0] SM_state_next;          // State machine next 'State'
-  reg [6:0] SM_counter_next;        // Value written into state machine internal counter in next clk cycle
   reg L0_write_next;                // Value written into L0 Write signal in next clk cycle
   reg L0_read_next;                 // Value written into L0 Write signal in next clk cycle
   reg [1:0] MA_instr_in_next;       // Value written into MAC Array Instruction In (W) in next cycle
@@ -347,6 +348,7 @@ module corelet ( input wire clk,
 
       WAIT_FOR_NEXT:
         begin
+          SM_ready <= 1;
           SM_counter_next  <=  SM_counter + 1;
           SM_state_next   <= SM_state;
         end
