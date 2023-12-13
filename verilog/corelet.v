@@ -155,6 +155,8 @@ module corelet ( input wire clk,
   assign O_CEN = !O_write;        // OSRAM enable signal (active low)
   assign O_WEN = 1'b0;            // Hardcode OSRAM to Write-only
 
+  assign ready = SM_ready;        
+
   always @(posedge clk or posedge reset) begin
     if(reset) begin
       SM_counter  <= 'd0;
@@ -166,6 +168,7 @@ module corelet ( input wire clk,
       SFU_EN      <= 'd0;
       SFU_OUT_EN  <= 'd0;
       O_write     <= 'd0;
+      SM_ready <='d0;
     end
     else begin
       // YJ // Do we need these delayed signals?

@@ -252,5 +252,9 @@ module core_tb;
     #2 forever #2 clk = ~clk;
   end
 
+  always@(posedge output_ready)
+  begin
+    start=0;
+  end
 endmodule
 
