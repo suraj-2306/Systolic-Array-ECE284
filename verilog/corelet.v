@@ -46,6 +46,8 @@ module corelet ( input wire clk,
   reg SM_ready;                     // State Machine oujtput ready signal
   reg SM_reset_ma;                  // State machine reset Mac Array signal
   reg SM_reset_ma_next;             // Value weitten into state machine reset mac array in next clk cycle
+  reg SM_reset_sfu_ptr;             // State machine reset Mac Array signal
+  reg SM_reset_sfu_ptr_next;        // Value weitten into state machine reset mac array in next clk cycle
   reg [6:0] SM_counter;             // State machine internal counter
   reg [6:0] SM_counter_next;        // Value written into state machine internal counter in next clk cycle
   reg [3:0] SM_state;               // State machine 'State'
@@ -92,7 +94,7 @@ module corelet ( input wire clk,
 
   l0 #(.bw(bw)) l0_instance(
     .clk(clk),
-    .reset(reset),
+    .reset(SM_reset_ma),
     .in(I_Q),
     .out(L0_MA),
     .wr(L0_WRITE),
@@ -122,7 +124,8 @@ module corelet ( input wire clk,
         .enable(SFU_EN),
         .out_en(SFU_OUT_EN),
         .clk(clk),
-        .reset(reset));
+        .reset(reset),
+        .reset_ptr(SM_reset_sfu_ptr));
     end
   endgenerate
 
@@ -173,6 +176,8 @@ module corelet ( input wire clk,
       SM_ready    <= 'd0;
       SM_reset_ma <= 'd1;
       SM_reset_ma_next <= 'd0;
+      SM_reset_sfu_ptr <= 'd1;
+      SM_reset_sfu_ptr_next <= 'd0;
     end
     else begin
       // YJ // Do we need these delayed signals?
@@ -196,6 +201,7 @@ module corelet ( input wire clk,
       SFU_OUT_EN  <= SFU_out_en_next;
 
       SM_reset_ma <= SM_reset_ma_next;
+      SM_reset_sfu_ptr <= SM_reset_sfu_ptr_next;
 
     end
   end
@@ -233,6 +239,7 @@ module corelet ( input wire clk,
           kij_next    <= 'd0;       // Initialise to 0 when start
           SFU_enable_next <= 'd0;
           SM_reset_ma_next  <= 'd1; // Keep MAC Array reset till we begin operation
+          SM_reset_sfu_ptr_next <= 'd1; // Keep SFU ptrs reset till we begin operation
         end
         else SM_state_next <= IDLE;
 
@@ -285,11 +292,13 @@ module corelet ( input wire clk,
         if (SM_counter > 'd6) begin
           // Weights have been loaded into the SysArr PEs
           // Move on to supplying the activations in the next state
+          SM_reset_sfu_ptr_next <= 'd0;
           SM_state_next    <=  ACT_LD;
           SM_counter_next  <=  'd0;
         end else begin
           // Initialize state
           // Wait for a total of 8 cycles
+          SM_reset_sfu_ptr_next <= 'd1;
           SM_counter_next  <=  SM_counter + 1;
           SM_state_next    <= SM_state;
         end
@@ -312,21 +321,18 @@ module corelet ( input wire clk,
           // YJ // Reset MAC Array to clear all weights?
           // Move to next step
           SFU_enable_next  <= 'd0;
-          SM_counter_next  <=  'd0;
-          SM_state_next    <=  (kij < 'd7) ? WT_LD : PSUMS_OSRAM_WR;
-          kij_next <= kij=='d8 ? 'd8 : kij+'d1;
+          SM_counter_next  <= 'd0;
+          SM_state_next    <= (kij < 'd8) ? WT_LD : PSUMS_OSRAM_WR;
+          kij_next         <= (kij=='d8) ? 'd8 : kij+'d1;
           SM_reset_ma_next <= 'd1;
-        end else if (SM_counter > 'd22) begin
+        end else if (SM_counter > 'd16) begin
           // All activations have been provided to the SysArr.
-          // Wait for execution to complete.
-          L0_read_next     <=  1'b0;
-          SM_counter_next  <=  SM_counter + 1;
-        end else if (SM_counter > 'd15) begin
           // Set instr to 0x00 (NOP, will be cascaded as required)
           // Delayed by 1 cycle because this is propagated at falling edge
+          L0_read_next     <=  1'b0;
           MA_instr_in_next <=  2'b00;
           SM_counter_next  <=  SM_counter + 1;
-        end else if (SM_counter > 'd14) begin
+        end else if (SM_counter > 'd15) begin
           // All activations have been loaded into L0 already
           // Disable writing into L0
           L0_write_next    <=  1'b0;
