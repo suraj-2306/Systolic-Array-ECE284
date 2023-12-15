@@ -1,3 +1,4 @@
+
 module sfu (
   output  [psum_bw-1:0] psum_out,
   input signed  [psum_bw-1:0] psum_in,
@@ -105,6 +106,5 @@ module sfu (
         out_ptr <= out_ptr + 1;
       end
   end
-
 endmodule
 

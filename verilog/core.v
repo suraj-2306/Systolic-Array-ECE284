@@ -79,12 +79,6 @@ module core(
     .I_Q(I_Q),
     .I_WEN(CL_I_WEN),
 
-    .O_A(CL_O_A), 
-    .O_CEN(CL_O_CEN), 
-    .O_Q(O_Q),
-    .O_WEN(CL_O_WEN)
-);
-
     .O_A(CL_O_A),
     .O_CEN(CL_O_CEN),
     .O_D(CL_O_D),

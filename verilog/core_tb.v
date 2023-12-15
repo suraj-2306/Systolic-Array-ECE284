@@ -1,5 +1,23 @@
 
 module core_tb;
+
+  // ---------- Parameters definition ----------
+
+  parameter bw = 4;           // Bit-width of kernel and activation elements
+  parameter psum_bw = 16;     // Bit-width of Partial Sum
+  parameter isram_bw = 32;    // Bit-width of Input SRAM
+  parameter osram_bw = 128;   // Bit-width of Output SRAM
+
+  parameter len_kij = 9;      // Length of kernel map (single layer)
+  parameter len_nij = 36;     // Length of input map (single input layer)
+  parameter len_onij = 16;    // Length of output map (single input layer)
+  parameter num_ip_ch = 8;    // Number of Input channels (for conv layer)
+
+  parameter col = 8;          // Number of columns in Systolic Array
+  parameter row = 8;          // Number of rows in Systolic Array
+
+  // ---------- Variables/Wires/Regs definition ----------
+
   reg clk;
   reg reset;
   reg start;
@@ -16,21 +34,16 @@ module core_tb;
   logic [127:0] O_D;           // Output value read from txt file
   logic [127:0] tempVar;
 
-  wire [31:0] I_Q;
-  reg [6:0] I_A;
-  logic [31:0] I_D;
-  reg I_CEN;
-  reg I_WEN;
-  reg [31:0] inputSramData[108:0];
+  reg I_CEN;                  // ISRAM Chip-enable
+  reg I_WEN;                  // ISRAM Write-enable
+  reg O_CEN;                  // OSRAM Chip-enable
+  reg O_WEN;                  // OSRAM Write-enable
+  reg TB_CL_SELECT = 0;       // Controller select (who controls the SRAM)
 
-  wire [31:0] O_Q;
-  reg [6:0] O_A;
-  logic [31:0] O_D;
-  reg O_CEN;
-  reg O_WEN;
-  reg [127:0] outputSramData[15:0];
+  // Validation registers (for comparing hardware values with txt files)
+  reg [isram_bw-1:0] inputSramData[(num_ip_ch*len_kij) + len_nij:0];
+  reg [osram_bw-1:0] outputSramData[len_onij-1:0];
 
-  reg TB_CL_SELECT = 0;
   integer w_file, w_scan_file;  // file_handler
   integer a_file, a_scan_file;  // file_handler
   integer p_file, p_scan_file;  // file_handler
@@ -38,6 +51,8 @@ module core_tb;
   integer captured_data;
   integer error = 0;
 
+
+  // ---------- Module(s) instantiation ----------
 
   core core_instance (
     .clk  (clk),
@@ -51,15 +66,16 @@ module core_tb;
     .TB_I_Q(I_Q),
     .TB_I_WEN(I_WEN),
 
-      .TB_O_CEN(O_CEN),
-      .TB_O_A  (O_A),
-      .TB_O_D  (O_D),
-      .TB_O_Q  (O_Q),
-      .TB_O_WEN(O_WEN)
+    .TB_O_CEN(O_CEN),
+    .TB_O_A(O_A),
+    .TB_O_D(O_D),
+    .TB_O_Q(O_Q),
+    .TB_O_WEN(O_WEN)
   );
 
-  initial begin
+  // ---------- Testbench operation ----------
 
+  initial begin
     $dumpfile("core_tb.vcd");
     $dumpvars(0, core_tb);
 
@@ -92,17 +108,19 @@ module core_tb;
       // Give ISRAM address to write to
       #10 I_A = j;
       w_scan_file = $fscanf(w_file, "%32b", I_D);
-      inputSramData[j][31:0] = I_D;
+      inputSramData[j][isram_bw-1:0] = I_D;
     end
+    // Disable ISRAM
+    #10 I_CEN = 1; I_WEN = 1;
 
-    #10 I_CEN = 1;
-    I_WEN = 1;
-    TB_CL_SELECT = 1;
-
-    for (i = 0; i < 72; i = i + 1) begin
-      #5 I_CEN = 0;
-      I_WEN = 1;
-      I_A   = i;
+    // ---------- Verify weights read into SRAM ----------
+    $display("Verify weights read into SRAM");
+    // Enable ISRAM for reading
+    #11 I_CEN = 0; I_WEN = 1;
+    error = 0;
+    for (i = 0; i < (num_ip_ch*len_kij); i = i + 1) begin
+      // Give ISRAM address to read from
+      #5 I_A = i;
       #5
       // $display("%2d-th read data is %h", i, I_Q);
       if (inputSramData[i][31:0] != I_Q) begin
@@ -121,19 +139,36 @@ module core_tb;
       // $display("%d", error);
       // $display("%d", i);
     end
+    $display("Encountered %d error(s)", error);
 
 
     // ---------- Open activation.txt file for reading ----------
     a_file = $fopen("verilog/activation_project.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
-    a_scan_file = $fscanf(a_file, "%s", captured_data);
-    a_scan_file = $fscanf(a_file, "%s", captured_data);
-    a_scan_file = $fscanf(a_file, "%s", captured_data);
+    a_scan_file = $fscanf(a_file,"%s", captured_data);
+    a_scan_file = $fscanf(a_file,"%s", captured_data);
+    a_scan_file = $fscanf(a_file,"%s", captured_data);
 
-    #101 reset = 0;
-    #10 I_CEN = 0;
-    I_WEN = 0;
+    #101 reset= 0;
+
+    // Enable ISRAM for Writing
+    #10 I_CEN = 0; I_WEN = 0;
+    for (i=0; i<len_nij ; i=i+1) begin
+      // Give ISRAM address to write to (offset by number of kernel elements)
+      #10 I_A = (num_ip_ch*len_kij) + i;
+      a_scan_file = $fscanf(a_file,"%32b", I_D);
+      inputSramData[(num_ip_ch*len_kij)+i][isram_bw-1:0] = I_D;
+    end
+    // Disable ISRAM
+    #10 I_CEN = 1; I_WEN = 1;
+
+    // ---------- Verify activations read into SRAM ----------
+    $display("Verify activations read into SRAM");
+    // Enable ISRAM for reading
+    #10 I_CEN = 0; I_WEN = 1;
+    // Disable OSRAM
+    O_CEN = 1;  O_WEN = 1;
     TB_CL_SELECT = 1;
     error = 0;
     for (i=0; i<len_nij ; i=i+1) begin
@@ -152,34 +187,14 @@ module core_tb;
       //     error = error+1;
       // end
     end
-    #10
-    I_CEN = 1;
-    I_WEN = 1;
-    TB_CL_SELECT = 1;
+    $display("Encountered %d error(s)", error);
 
-    for (i = 0; i < 36; i = i + 1) begin
-      #5 I_CEN = 0;
-      I_WEN = 1;
-      I_A   = i + 72;
-      #5
-        if (inputSramData[72+i][31:0] == I_Q)
-          $display("%2d-th read data is %h --- Data matched", i, I_Q);
-        else begin
-          $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, I_Q,
-                   inputSramData[72+i]);
-          error = error + 1;
-        end
-    end
+    // Disable ISRAM
+    #10 I_CEN = 1; I_WEN = 1;
 
-
-    // end
+    // End testbench control. Let Corelet controller take over now.
     #150 start = 1;
-
-
-    #10000;
-
-    I_WEN = 1;
-    I_CEN = 1;
+    // YJ // Should this be here?
     TB_CL_SELECT = 0;
     #10000 ;
   end
@@ -213,9 +228,6 @@ module core_tb;
       outputSramData[i][127:0] = tempVar;
       $display("%d iter : %h",i, tempVar);
     end
-    #10 O_CEN = 1;
-    O_WEN = 1;
-    TB_CL_SELECT = 1;
 
     start = 0;
 
@@ -243,7 +255,9 @@ module core_tb;
       //     error = error+1;
       // end
     end
-    #100 $finish;
+    $display("Encountered %d error(s)", error);
+    // Disable OSRAM
+    #10 O_CEN = 1; O_WEN = 1;
 
     #10 $finish;
   end

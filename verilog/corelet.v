@@ -1,11 +1,3 @@
-module corelet (
-    input  wire        clk,
-    input  wire        start,
-    input  wire        reset,
-    input       [31:0] I_Q,
-    output      [ 6:0] I_A,
-    output             I_CEN,
-    output             I_WEN,
 
 module corelet ( input wire clk,
     input wire start,
@@ -35,6 +27,9 @@ module corelet ( input wire clk,
   parameter row = 8;
   parameter bw = 4;
   parameter psum_bw = 16;
+  // parameter total_cycle = 64;
+  // parameter total_cycle_2nd = 8;
+
 
   // ---------- Variables/Wires/Regs definition ----------
 
@@ -73,9 +68,6 @@ module corelet ( input wire clk,
   logic [3:0] kij, kij_next;
   logic [3:0] lut_ptr;
 
-  logic [6:0] ACT_ADDR;
-  logic [6:0] WEIGHT_ADDR;
-  logic [6:0] AW_ADDR_MUX;
 
   //l0 operations. Input can be the instructions or data
 
