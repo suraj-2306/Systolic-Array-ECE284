@@ -93,7 +93,8 @@ module core_tb;
     #4 reset = 0;
 
     // ---------- Open weight.txt file for reading ----------
-    w_file = $fopen("./verilog/weight_project.txt", "r");
+    // w_file = $fopen("./verilog/weight_project.txt", "r");
+    w_file = $fopen("./txt_files_16_channel/activation_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     w_scan_file = $fscanf(w_file, "%s", captured_data);
@@ -148,7 +149,8 @@ module core_tb;
 
 
     // ---------- Open activation.txt file for reading ----------
-    a_file = $fopen("verilog/activation_project.txt", "r");
+    // a_file = $fopen("verilog/activation_project.txt", "r");
+    a_file = $fopen("./txt_files_16_channel/activation_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     a_scan_file = $fscanf(a_file,"%s", captured_data);
@@ -213,7 +215,8 @@ module core_tb;
     // Stop Core operation.
 
     // ---------- Open output.txt for reading expected outputs ----------
-    a_file = $fopen("./verilog/output_project.txt", "r");
+    // a_file = $fopen("./verilog/output_project.txt", "r");
+    a_file = $fopen("./txt_files_16_channel/output_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     // a_scan_file = $fscanf(a_file,"%s", captured_data);
@@ -230,7 +233,7 @@ module core_tb;
     for (i=0; i<len_onij ; i=i+1) begin
       // #10 O_A   = i;
       a_scan_file = $fscanf(a_file,"%128b", tempVar);
-      outputSramData[i][127:0] = tempVar;
+      outputSramData[i][osram_bw-1:0] = tempVar;
       $display("%d iter : %h",i, tempVar);
     end
 
@@ -248,12 +251,12 @@ module core_tb;
       // Give OSRAM address to read from
       #5 O_A = i;
       #5
-      // $display("%2d-th read data is %h, expected data is %h", i, O_Q, outputSramData[i]);
-      if (outputSramData[i][127:0] != O_Q) begin
+      $display("%2d-th read data is %h, expected data is %h", i, O_Q, outputSramData[i]);
+      if (outputSramData[i][osram_bw-1:0] != O_Q) begin
         $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, O_Q, outputSramData[i]);
         error = error + 1;
       end
-      // if (outputSramData[i][127:0] == O_Q)
+      // if (outputSramData[i][osram_bw-1:0] == O_Q)
       //     $display("%2d-th read data is %h --- Data matched", i, O_Q);
       // else begin
       //     $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, O_Q, outputSramData[i]);
