@@ -1,5 +1,3 @@
-
-
 module mac_tile (
     clk,
     out_s,

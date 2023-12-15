@@ -3,10 +3,8 @@ module core_tb;
 
   // ---------- Parameters definition ----------
 
-  parameter bw = 4;           // Bit-width of kernel and activation elements
+  parameter bw = 8;           // Bit-width of kernel and activation elements
   parameter psum_bw = 16;     // Bit-width of Partial Sum
-  parameter isram_bw = 32;    // Bit-width of Input SRAM
-  parameter osram_bw = 128;   // Bit-width of Output SRAM
 
   parameter len_kij = 9;      // Length of kernel map (single layer)
   parameter len_nij = 36;     // Length of input map (single input layer)
@@ -15,6 +13,13 @@ module core_tb;
 
   parameter col = 8;          // Number of columns in Systolic Array
   parameter row = 8;          // Number of rows in Systolic Array
+
+  parameter isram_bw = bw * row;      // Bit-width of Input SRAM
+  parameter osram_bw = psum_bw * row; // Bit-width of Output SRAM
+  parameter isram_addr_bw = 7;        // Bit-width of ISRAM Address bus
+  parameter osram_addr_bw = 4;        // Bit-width of OSRAM Address bus
+  parameter isram_num_entries = 128;  // Number of entries in ISRAM
+  parameter osram_num_entries = 16;   // Number of entries in OSRAM
 
   // ---------- Variables/Wires/Regs definition ----------
 
@@ -25,14 +30,14 @@ module core_tb;
   wire output_ready;
 
   wire [isram_bw-1:0] I_Q;    // Input sent to ISRAM (Input SRAM)
-  reg [6:0] I_A;              // Address of input sent to SRAM
+  reg [isram_addr_bw-1:0] I_A;              // Address of input sent to SRAM
   logic [isram_bw-1:0] I_D;   // Input value read from txt file (activation and weight)
 
   // YJ // There is a mismatch of bitwidths here!
-  wire [127:0] O_Q;            // Output read from OSRAM (Output SRAM)
-  reg [6:0] O_A;              // Address of output val read from txt file
-  logic [127:0] O_D;           // Output value read from txt file
-  logic [127:0] tempVar;
+  wire [osram_bw-1:0] O_Q;            // Output read from OSRAM (Output SRAM)
+  reg [osram_addr_bw-1:0] O_A;              // Address of output val read from txt file
+  logic [osram_bw-1:0] O_D;           // Output value read from txt file
+  logic [osram_bw-1:0] tempVar;
 
   reg I_CEN;                  // ISRAM Chip-enable
   reg I_WEN;                  // ISRAM Write-enable
@@ -54,7 +59,7 @@ module core_tb;
 
   // ---------- Module(s) instantiation ----------
 
-  core core_instance (
+  core #(.bw(bw)) core_instance (
     .clk  (clk),
     .start(start),
     .reset(reset),

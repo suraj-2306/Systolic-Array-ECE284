@@ -2,17 +2,17 @@
 module corelet ( input wire clk,
     input wire start,
     input wire reset,
-    input   [31:0]  I_Q,      // ISRAM Data Output
-    output  [6:0]   I_A,      // ISRAM Address
-    output          I_CEN,    // ISRAM Chip-enable
-    output          I_WEN,    // ISRAM Write-enable (to select betweek Read/Write)
+    output  I_CEN,                    // ISRAM Chip-enable
+    output  I_WEN,                    // ISRAM Write-enable (to select betweek Read/Write)
+    input   [isram_bw-1:0] I_Q,       // ISRAM Data Output
+    output  [isram_addr_bw-1:0] I_A,  // ISRAM Address
 
-    output  [127:0] O_D,      // OSRAM Data Input
-    output  [3:0]   O_A,      // OSRAM Address
-    output          O_CEN,    // OSRAM Chip-enable
-    output          O_WEN,    // OSRAM Write-enable (to select betweek Read/Write)
+    output  O_CEN,                    // OSRAM Chip-enable
+    output  O_WEN,                    // OSRAM Write-enable (to select betweek Read/Write)
+    output  [osram_bw-1:0] O_D,       // OSRAM Data Input
+    output  [osram_addr_bw-1:0] O_A,  // OSRAM Address
 
-    output  ready             // Core operation complete. Data is ready in OSRAM.
+    output  ready                     // Core operation complete. Data is ready in OSRAM.
 
     // YJ // Add a connection from SFU to OSRAM
     // Add an output to signal computation complete
@@ -30,6 +30,10 @@ module corelet ( input wire clk,
   // parameter total_cycle = 64;
   // parameter total_cycle_2nd = 8;
 
+  parameter isram_bw = bw * row;      // Bit-width of Input SRAM
+  parameter osram_bw = psum_bw * row; // Bit-width of Output SRAM
+  parameter isram_addr_bw = 7;        // Bit-width of ISRAM Address bus
+  parameter osram_addr_bw = 4;        // Bit-width of OSRAM Address bus
 
   // ---------- Variables/Wires/Regs definition ----------
 
@@ -71,11 +75,11 @@ module corelet ( input wire clk,
 
   //l0 operations. Input can be the instructions or data
 
-  logic [6:0] ACT_ADDR;             // Address for the next activation line in ISRAM
-  logic [6:0] WEIGHT_ADDR;          // Kernel element address (to be loaded next)
-  logic [6:0] AW_ADDR_MUX;          // Multiplexed ISRAM Address
+  logic [isram_addr_bw-1:0] ACT_ADDR;       // Address for the next activation line in ISRAM
+  logic [isram_addr_bw-1:0] WEIGHT_ADDR;    // Kernel element address (to be loaded next)
+  logic [isram_addr_bw-1:0] AW_ADDR_MUX;    // Multiplexed ISRAM Address
 
-  logic [3:0] O_ADDR_MUX;          // Multiplexed OSRAM Address
+  logic [osram_addr_bw-1:0] O_ADDR_MUX;     // Multiplexed OSRAM Address
 
   reg [1:0] MA_INSTR_IN;            // MAC Array Instruction In (West)
   wire [psum_bw*col-1:0] MA_OUT_S;  // MAC Array South output
@@ -104,7 +108,7 @@ module corelet ( input wire clk,
     .cascade(cascade)
   );
 
-  mac_array mac_array_instance (
+  mac_array #(.bw(bw)) mac_array_instance (
       .clk(clk),
       .reset(SM_reset_ma),
       .out_s(MA_OUT_S),

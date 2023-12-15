@@ -14,5 +14,6 @@
 ./verilog/core.v
 ./verilog/sfu1.v
 ./verilog/core_tb.v
+./verilog/sram.v
 ./verilog/sram_32b_w128.v
 ./verilog/sram_128b_w16.v
