@@ -125,7 +125,7 @@ module corelet ( input wire clk,
         .out_en(SFU_OUT_EN),
         .clk(clk),
         .reset(reset),
-        .reset_ptr(SM_reset_sfu_ptr));
+        .reset_ptr(SM_reset_ma));
     end
   endgenerate
 
@@ -315,7 +315,7 @@ module corelet ( input wire clk,
       // l0rd = 0
       // If kij index < 8, repeat from the top (kernel loading state)
       ACT_LD: //YJ // Add inter-cycle buffers (between activation input end and weight load beginning)
-        if (SM_counter > 'd30) begin
+        if (SM_counter > 'd31) begin
           // Activations/PSums have been calculated
           // YJ // Disable SFU to avoid any accidental overwrites. Here or 1 cycle later?
           // YJ // Reset MAC Array to clear all weights?
