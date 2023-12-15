@@ -22,7 +22,7 @@ wire signed [(bw/num_ch)-1:0] b_reg[num_ch-1:0];
 assign a_reg[0] = {1'b0, a[3:0]};   // force to be unsigned number
 assign a_reg[1] = {1'b0, a[7:4]};   // force to be unsigned number
 assign b_reg[0] = b[3:0];
-assign b_reg[0] = b[7:4];
+assign b_reg[1] = b[7:4];
 
 assign product = a_reg[0]*b_reg[0] + a_reg[1]*b_reg[1];
 

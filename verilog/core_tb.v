@@ -94,7 +94,7 @@ module core_tb;
 
     // ---------- Open weight.txt file for reading ----------
     // w_file = $fopen("./verilog/weight_project.txt", "r");
-    w_file = $fopen("./txt_files_16_channel/activation_16.txt", "r");
+    w_file = $fopen("./txt_files_16_channel/weight_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     w_scan_file = $fscanf(w_file, "%s", captured_data);
@@ -113,7 +113,7 @@ module core_tb;
     for (j = 0; j < (num_ip_ch*len_kij); j = j + 1) begin
       // Give ISRAM address to write to
       #10 I_A = j;
-      w_scan_file = $fscanf(w_file, "%32b", I_D);
+      w_scan_file = $fscanf(w_file, "%64b", I_D);
       inputSramData[j][isram_bw-1:0] = I_D;
     end
     // Disable ISRAM
@@ -128,13 +128,13 @@ module core_tb;
       // Give ISRAM address to read from
       #5 I_A = i;
       #5
-      // $display("%2d-th read data is %h", i, I_Q);
-      if (inputSramData[i][31:0] != I_Q) begin
+      // $display("%2d-th read wt is %h", i, I_Q);
+      if (inputSramData[i][isram_bw-1:0] != I_Q) begin
         $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, I_Q,
                   inputSramData[i]);
         error = error + 1;
       end
-      // if (inputSramData[i][31:0] == I_Q)
+      // if (inputSramData[i][isram_bw-1:0] == I_Q)
       //   $display("%2d-th read data is %h --- Data matched", i, I_Q);
       // else begin
       //   $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, I_Q,
@@ -164,7 +164,7 @@ module core_tb;
     for (i=0; i<len_nij ; i=i+1) begin
       // Give ISRAM address to write to (offset by number of kernel elements)
       #10 I_A = (num_ip_ch*len_kij) + i;
-      a_scan_file = $fscanf(a_file,"%32b", I_D);
+      a_scan_file = $fscanf(a_file,"%64b", I_D);
       inputSramData[(num_ip_ch*len_kij)+i][isram_bw-1:0] = I_D;
     end
     // Disable ISRAM
@@ -182,7 +182,7 @@ module core_tb;
       // Give ISRAM address to read from (offset by number of kernel elements)
       #5 I_A = (num_ip_ch*len_kij) + i;
       #5
-      // $display("%2d-th read data is %h", i, I_Q);
+      // $display("%2d-th read act is %h", i, I_Q);
       if (inputSramData[(num_ip_ch*len_kij)+i][isram_bw-1:0] != I_Q) begin
         $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, I_Q, inputSramData[72+i]);
         error = error + 1;
@@ -251,7 +251,7 @@ module core_tb;
       // Give OSRAM address to read from
       #5 O_A = i;
       #5
-      $display("%2d-th read data is %h, expected data is %h", i, O_Q, outputSramData[i]);
+      // $display("%2d-th read data is %h, expected data is %h", i, O_Q, outputSramData[i]);
       if (outputSramData[i][osram_bw-1:0] != O_Q) begin
         $display("%2d-th read data is %h, expected data is %h --- Data ERROR !!!", i, O_Q, outputSramData[i]);
         error = error + 1;
