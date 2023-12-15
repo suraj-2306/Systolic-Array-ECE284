@@ -198,7 +198,6 @@ module corelet ( input wire clk,
       L0_WRITE    <= L0_write_next;
 
       SFU_EN      <= SFU_enable_next;
-      SFU_OUT_EN  <= SFU_out_en_next;
 
       SM_reset_ma <= SM_reset_ma_next;
       SM_reset_sfu_ptr <= SM_reset_sfu_ptr_next;
@@ -210,11 +209,12 @@ module corelet ( input wire clk,
     if (!reset) begin
       L0_READ     <= L0_read_next;
       MA_INSTR_IN <= MA_instr_in_next;
+      SFU_OUT_EN  <= SFU_out_en_next;
 
-      if (SFU_OUT_EN)
-        O_write <= 'b1;   // Copy accumulated PSUMS into OSRAM
-      else
-        O_write <= 'b0;
+      // if (SFU_OUT_EN)
+      //   O_write <= 'b1;   // Copy accumulated PSUMS into OSRAM
+      // else
+      //   O_write <= 'b0;
     end
   end
 
@@ -356,13 +356,15 @@ module corelet ( input wire clk,
         end
 
       PSUMS_OSRAM_WR:
-        if (SM_counter > 'd15) begin
+        if (SM_counter > 'd16) begin
+          O_write <= 'b0;
           SFU_out_en_next <= 'b0;
           SM_counter_next <= 'd0;
           SM_state_next   <= WAIT_FOR_NEXT;
         end
         else begin
-          O_ADDR_MUX = SM_counter;
+          O_ADDR_MUX = SM_counter - 1;
+          O_write <= 'b1;
           SFU_out_en_next <= 'b1;
           SM_state_next   <= SM_state;
           SM_counter_next <= SM_counter + 1;

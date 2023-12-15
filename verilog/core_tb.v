@@ -32,6 +32,7 @@ module core_tb;
   wire [127:0] O_Q;            // Output read from OSRAM (Output SRAM)
   reg [6:0] O_A;              // Address of output val read from txt file
   logic [127:0] O_D;           // Output value read from txt file
+  logic [127:0] tempVar;
 
   reg I_CEN;                  // ISRAM Chip-enable
   reg I_WEN;                  // ISRAM Write-enable
@@ -222,10 +223,10 @@ module core_tb;
     O_CEN = 1;  O_WEN = 1;
     TB_CL_SELECT = 0;
     for (i=0; i<len_onij ; i=i+1) begin
-      #10 O_A   = i;
-      a_scan_file = $fscanf(a_file,"%32b", O_D);
-      outputSramData[i][127:0] = O_D;
-      $display("%h",O_D);
+      // #10 O_A   = i;
+      a_scan_file = $fscanf(a_file,"%128b", tempVar);
+      outputSramData[i][127:0] = tempVar;
+      $display("%d iter : %h",i, tempVar);
     end
 
     start = 0;

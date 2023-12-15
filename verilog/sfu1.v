@@ -90,7 +90,7 @@ module sfu (
       out_ptr <= 'd0;
     end
 
-    else if (valid & enable) begin
+    else if (valid && enable) begin
       reg_bank[in_ptr] <=  reg_bank[in_ptr] + psum_in;
       if(in_ptr == (input_ch - 1))
         in_ptr <= 0;
