@@ -94,7 +94,7 @@ module core_tb;
 
     // ---------- Open weight.txt file for reading ----------
     // w_file = $fopen("./verilog/weight_project.txt", "r");
-    w_file = $fopen("./txt_files_16_channel/weight_16.txt", "r");
+    w_file = $fopen("sim/weight_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     w_scan_file = $fscanf(w_file, "%s", captured_data);
@@ -150,7 +150,7 @@ module core_tb;
 
     // ---------- Open activation.txt file for reading ----------
     // a_file = $fopen("verilog/activation_project.txt", "r");
-    a_file = $fopen("./txt_files_16_channel/activation_16.txt", "r");
+    a_file = $fopen("./sim/activation_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     a_scan_file = $fscanf(a_file,"%s", captured_data);
@@ -216,7 +216,7 @@ module core_tb;
 
     // ---------- Open output.txt for reading expected outputs ----------
     // a_file = $fopen("./verilog/output_project.txt", "r");
-    a_file = $fopen("./txt_files_16_channel/output_16.txt", "r");
+    a_file = $fopen("./sim/output_16.txt", "r");
 
     // Following three lines are to remove the first three comment lines of the file
     // a_scan_file = $fscanf(a_file,"%s", captured_data);
