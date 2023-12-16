@@ -1,4 +1,3 @@
-
 module sfu (
   output  [psum_bw-1:0] psum_out,
   input signed  [psum_bw-1:0] psum_in,
@@ -56,38 +55,27 @@ module sfu (
   integer in_ptr, out_ptr, j;
   assign psum_out = psum_out_reg;
 
-  initial begin
-    in_ptr  <= 'd0;
-    out_ptr <= 'd0;
-  end
-
-  always @(posedge clk or posedge reset or posedge reset_ptr) begin
+  always @(posedge clk or posedge reset ) begin
     if (reset) begin
       in_ptr  <= 'd0;
       out_ptr <= 'd0;
       // Reset all the psum regs to zero
-      reg_bank[0] = 0;
-      reg_bank[1] = 0;
-      reg_bank[2] = 0;
-      reg_bank[3] = 0;
-      reg_bank[4] = 0;
-      reg_bank[5] = 0;
-      reg_bank[6] = 0;
-      reg_bank[7] = 0;
-      reg_bank[8] = 0;
-      reg_bank[9] = 0;
-      reg_bank[10] = 0;
-      reg_bank[11] = 0;
-      reg_bank[12] = 0;
-      reg_bank[13] = 0;
-      reg_bank[14] = 0;
-      reg_bank[15] = 0;
-      psum_out_reg = 0;
-    end
-
-    else if (reset_ptr) begin
-      in_ptr  <= 'd0;
-      out_ptr <= 'd0;
+      reg_bank[0] <= 0;
+      reg_bank[1] <= 0;
+      reg_bank[2] <= 0;
+      reg_bank[3] <= 0;
+      reg_bank[4] <= 0;
+      reg_bank[5] <= 0;
+      reg_bank[6] <= 0;
+      reg_bank[7] <= 0;
+      reg_bank[8] <= 0;
+      reg_bank[9] <= 0;
+      reg_bank[10] <= 0;
+      reg_bank[11] <= 0;
+      reg_bank[12] <= 0;
+      reg_bank[13] <= 0;
+      reg_bank[14] <= 0;
+      reg_bank[15] <= 0;
     end
 
     else if (valid && enable) begin
@@ -98,13 +86,25 @@ module sfu (
         in_ptr <= in_ptr + 1;
     end
 
-    if (out_en) begin
-      psum_out_reg = (reg_bank[out_ptr] > 0) ? reg_bank[out_ptr] : 0;
+    else if (out_en) begin
+      psum_out_reg <= (reg_bank[out_ptr] > 0) ? reg_bank[out_ptr] : 0;
       if(out_ptr == (input_ch - 1))
         out_ptr <= 0;
       else
         out_ptr <= out_ptr + 1;
       end
+
   end
+
+  // always@(posedge clk) begin
+  //   if (out_en) begin
+  //     psum_out_reg <= (reg_bank[out_ptr] > 0) ? reg_bank[out_ptr] : 0;
+  //     if(out_ptr == (input_ch - 1))
+  //       out_ptr <= 0;
+  //     else
+  //       out_ptr <= out_ptr + 1;
+  //     end
+  //   end
 endmodule
+
 

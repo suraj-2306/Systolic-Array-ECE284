@@ -2,17 +2,17 @@
 module corelet ( input wire clk,
     input wire start,
     input wire reset,
-    input   [31:0]  I_Q,      // ISRAM Data Output
-    output  [6:0]   I_A,      // ISRAM Address
-    output          I_CEN,    // ISRAM Chip-enable
-    output          I_WEN,    // ISRAM Write-enable (to select betweek Read/Write)
+    output  I_CEN,                    // ISRAM Chip-enable
+    output  I_WEN,                    // ISRAM Write-enable (to select betweek Read/Write)
+    input   [isram_bw-1:0] I_Q,       // ISRAM Data Output
+    output  [isram_addr_bw-1:0] I_A,  // ISRAM Address
 
-    output  [127:0] O_D,      // OSRAM Data Input
-    output  [3:0]   O_A,      // OSRAM Address
-    output          O_CEN,    // OSRAM Chip-enable
-    output          O_WEN,    // OSRAM Write-enable (to select betweek Read/Write)
+    output  O_CEN,                    // OSRAM Chip-enable
+    output  O_WEN,                    // OSRAM Write-enable (to select betweek Read/Write)
+    output  [osram_bw-1:0] O_D,       // OSRAM Data Input
+    output  [osram_addr_bw-1:0] O_A,  // OSRAM Address
 
-    output  ready             // Core operation complete. Data is ready in OSRAM.
+    output  ready                     // Core operation complete. Data is ready in OSRAM.
 
     // YJ // Add a connection from SFU to OSRAM
     // Add an output to signal computation complete
@@ -25,11 +25,15 @@ module corelet ( input wire clk,
 
   parameter col = 8;
   parameter row = 8;
-  parameter bw = 4;
+  parameter bw = 4; //Making it 8 here for 2 channel processing. I am writing this as the corelet will not have an input from the core regarding the bandwidth during pnr in quartus prime, as core is not included in the simulation
   parameter psum_bw = 16;
   // parameter total_cycle = 64;
   // parameter total_cycle_2nd = 8;
 
+  parameter isram_bw = bw * row;      // Bit-width of Input SRAM
+  parameter osram_bw = psum_bw * row; // Bit-width of Output SRAM
+  parameter isram_addr_bw = 7;        // Bit-width of ISRAM Address bus
+  parameter osram_addr_bw = 4;        // Bit-width of OSRAM Address bus
 
   // ---------- Variables/Wires/Regs definition ----------
 
@@ -65,17 +69,17 @@ module corelet ( input wire clk,
   wire L0_FULL;                     // Wire out for L0 Full signal
   wire L0_READY;                    // Wire out for L0 Ready signal
 
-  logic [3:0] kij, kij_next;
-  logic [3:0] lut_ptr;
+  reg [3:0] kij, kij_next;
+  reg [3:0] lut_ptr;
 
 
   //l0 operations. Input can be the instructions or data
 
-  logic [6:0] ACT_ADDR;             // Address for the next activation line in ISRAM
-  logic [6:0] WEIGHT_ADDR;          // Kernel element address (to be loaded next)
-  logic [6:0] AW_ADDR_MUX;          // Multiplexed ISRAM Address
+  reg [isram_addr_bw-1:0] ACT_ADDR;       // Address for the next activation line in ISRAM
+  reg [isram_addr_bw-1:0] WEIGHT_ADDR;    // Kernel element address (to be loaded next)
+  reg [isram_addr_bw-1:0] AW_ADDR_MUX;    // Multiplexed ISRAM Address
 
-  logic [3:0] O_ADDR_MUX;          // Multiplexed OSRAM Address
+  reg [osram_addr_bw-1:0] O_ADDR_MUX;     // Multiplexed OSRAM Address
 
   reg [1:0] MA_INSTR_IN;            // MAC Array Instruction In (West)
   wire [psum_bw*col-1:0] MA_OUT_S;  // MAC Array South output
@@ -104,7 +108,7 @@ module corelet ( input wire clk,
     .cascade(cascade)
   );
 
-  mac_array mac_array_instance (
+  mac_array #(.bw(bw)) mac_array_instance (
       .clk(clk),
       .reset(SM_reset_ma),
       .out_s(MA_OUT_S),
@@ -116,7 +120,7 @@ module corelet ( input wire clk,
   );
 
   generate
-    for (i=0; i<8; i=i+1) begin
+    for (i=0; i<8; i=i+1) begin : sfu_instance
       sfu sfu_instance(
         .psum_out(SFU_PSUMS_OUT[psum_bw*i +: psum_bw]),
         .psum_in(MA_OUT_S[psum_bw*i +:psum_bw]),
@@ -129,10 +133,10 @@ module corelet ( input wire clk,
     end
   endgenerate
 
-  // ---------- Corelet logic ----------
+  // ---------- Corelet reg ----------
 
   // YJ // This section is used to generate the addresses for fetching data from ISRAM.
-  // Review the logic here.
+  // Review the reg here.
   always @* begin
     case(kij)
       'd0: lut_ptr = 'd0;
@@ -147,7 +151,7 @@ module corelet ( input wire clk,
     endcase
     ACT_ADDR = lut_ptr + SM_counter + {SM_counter[3:2],1'b0};
     WEIGHT_ADDR = {kij,3'b0} + SM_counter;
-    // YJ // Need to review this logic
+    // YJ // Need to review this reg
     AW_ADDR_MUX = (SM_state==ACT_LD) ? ACT_ADDR + 72 : WEIGHT_ADDR;
   end
 
@@ -166,18 +170,7 @@ module corelet ( input wire clk,
     if(reset) begin
       SM_counter  <= 'd0;
       SM_state    <= 'd0;
-      L0_WRITE    <= 'd0;
-      L0_READ     <= 'd0;
       kij         <= 'd0;
-      MA_INSTR_IN <= 'd0;
-      SFU_EN      <= 'd0;
-      SFU_OUT_EN  <= 'd0;
-      O_write     <= 'd0;
-      SM_ready    <= 'd0;
-      SM_reset_ma <= 'd1;
-      SM_reset_ma_next <= 'd0;
-      SM_reset_sfu_ptr <= 'd1;
-      SM_reset_sfu_ptr_next <= 'd0;
     end
     else begin
       // YJ // Do we need these delayed signals?
@@ -191,14 +184,8 @@ module corelet ( input wire clk,
       SM_counter  <= SM_counter_next;
       SM_state    <= SM_state_next;
       kij         <= kij_next;
-
-      SM_state_next   <= SM_state;
-      SM_counter_next <= SM_counter;
-
       L0_WRITE    <= L0_write_next;
-
       SFU_EN      <= SFU_enable_next;
-
       SM_reset_ma <= SM_reset_ma_next;
       SM_reset_sfu_ptr <= SM_reset_sfu_ptr_next;
 
@@ -218,7 +205,7 @@ module corelet ( input wire clk,
     end
   end
 
-  // ---------- State Machine logic ----------
+  // ---------- State Machine reg ----------
 
   //Conventions
   // write_next is 1 for L0 write
