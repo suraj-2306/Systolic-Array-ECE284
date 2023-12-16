@@ -69,17 +69,17 @@ module corelet ( input wire clk,
   wire L0_FULL;                     // Wire out for L0 Full signal
   wire L0_READY;                    // Wire out for L0 Ready signal
 
-  logic [3:0] kij, kij_next;
-  logic [3:0] lut_ptr;
+  reg [3:0] kij, kij_next;
+  reg [3:0] lut_ptr;
 
 
   //l0 operations. Input can be the instructions or data
 
-  logic [isram_addr_bw-1:0] ACT_ADDR;       // Address for the next activation line in ISRAM
-  logic [isram_addr_bw-1:0] WEIGHT_ADDR;    // Kernel element address (to be loaded next)
-  logic [isram_addr_bw-1:0] AW_ADDR_MUX;    // Multiplexed ISRAM Address
+  reg [isram_addr_bw-1:0] ACT_ADDR;       // Address for the next activation line in ISRAM
+  reg [isram_addr_bw-1:0] WEIGHT_ADDR;    // Kernel element address (to be loaded next)
+  reg [isram_addr_bw-1:0] AW_ADDR_MUX;    // Multiplexed ISRAM Address
 
-  logic [osram_addr_bw-1:0] O_ADDR_MUX;     // Multiplexed OSRAM Address
+  reg [osram_addr_bw-1:0] O_ADDR_MUX;     // Multiplexed OSRAM Address
 
   reg [1:0] MA_INSTR_IN;            // MAC Array Instruction In (West)
   wire [psum_bw*col-1:0] MA_OUT_S;  // MAC Array South output
@@ -133,10 +133,10 @@ module corelet ( input wire clk,
     end
   endgenerate
 
-  // ---------- Corelet logic ----------
+  // ---------- Corelet reg ----------
 
   // YJ // This section is used to generate the addresses for fetching data from ISRAM.
-  // Review the logic here.
+  // Review the reg here.
   always @* begin
     case(kij)
       'd0: lut_ptr = 'd0;
@@ -151,7 +151,7 @@ module corelet ( input wire clk,
     endcase
     ACT_ADDR = lut_ptr + SM_counter + {SM_counter[3:2],1'b0};
     WEIGHT_ADDR = {kij,3'b0} + SM_counter;
-    // YJ // Need to review this logic
+    // YJ // Need to review this reg
     AW_ADDR_MUX = (SM_state==ACT_LD) ? ACT_ADDR + 72 : WEIGHT_ADDR;
   end
 
@@ -170,18 +170,7 @@ module corelet ( input wire clk,
     if(reset) begin
       SM_counter  <= 'd0;
       SM_state    <= 'd0;
-      L0_WRITE    <= 'd0;
-      L0_READ     <= 'd0;
       kij         <= 'd0;
-      MA_INSTR_IN <= 'd0;
-      SFU_EN      <= 'd0;
-      SFU_OUT_EN  <= 'd0;
-      O_write     <= 'd0;
-      SM_ready    <= 'd0;
-      SM_reset_ma <= 'd1;
-      SM_reset_ma_next <= 'd0;
-      SM_reset_sfu_ptr <= 'd1;
-      SM_reset_sfu_ptr_next <= 'd0;
     end
     else begin
       // YJ // Do we need these delayed signals?
@@ -195,14 +184,8 @@ module corelet ( input wire clk,
       SM_counter  <= SM_counter_next;
       SM_state    <= SM_state_next;
       kij         <= kij_next;
-
-      SM_state_next   <= SM_state;
-      SM_counter_next <= SM_counter;
-
       L0_WRITE    <= L0_write_next;
-
       SFU_EN      <= SFU_enable_next;
-
       SM_reset_ma <= SM_reset_ma_next;
       SM_reset_sfu_ptr <= SM_reset_sfu_ptr_next;
 
@@ -222,7 +205,7 @@ module corelet ( input wire clk,
     end
   end
 
-  // ---------- State Machine logic ----------
+  // ---------- State Machine reg ----------
 
   //Conventions
   // write_next is 1 for L0 write
