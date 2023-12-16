@@ -56,7 +56,7 @@ module sfu (
   integer in_ptr, out_ptr, j;
   assign psum_out = psum_out_reg;
 
-  always @(posedge clk or posedge reset or posedge reset_ptr) begin
+  always @(posedge clk or posedge reset )begin
     if (reset) begin
       in_ptr  <= 'd0;
       out_ptr <= 'd0;
@@ -77,11 +77,6 @@ module sfu (
       reg_bank[13] <= 0;
       reg_bank[14] <= 0;
       reg_bank[15] <= 0;
-    end
-
-    else if (reset_ptr) begin
-      in_ptr  <= 'd0;
-      out_ptr <= 'd0;
     end
 
     else if (valid && enable) begin
