@@ -33,7 +33,6 @@ module core_tb;
   reg [isram_addr_bw-1:0] I_A;              // Address of input sent to SRAM
   logic [isram_bw-1:0] I_D;   // Input value read from txt file (activation and weight)
 
-  // YJ // There is a mismatch of bitwidths here!
   wire [osram_bw-1:0] O_Q;            // Output read from OSRAM (Output SRAM)
   reg [osram_addr_bw-1:0] O_A;              // Address of output val read from txt file
   logic [osram_bw-1:0] O_D;           // Output value read from txt file
@@ -201,7 +200,6 @@ module core_tb;
 
     // End testbench control. Let Corelet controller take over now.
     #150 start = 1;
-    // YJ // Should this be here?
     TB_CL_SELECT = 0;
     #10000 ;
   end

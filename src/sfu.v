@@ -17,43 +17,9 @@ module sfu (
   // Define reg bank for 16 input channels
   reg signed [psum_bw-1:0] psum_out_reg;
   reg signed [psum_bw-1:0] reg_bank [input_ch-1:0];
-  reg [psum_bw-1:0] relu_out;
 
-  wire [psum_bw-1:0] reg0;
-  wire [psum_bw-1:0] reg1;
-  wire [psum_bw-1:0] reg2;
-  wire [psum_bw-1:0] reg3;
-  wire [psum_bw-1:0] reg4;
-  wire [psum_bw-1:0] reg5;
-  wire [psum_bw-1:0] reg6;
-  wire [psum_bw-1:0] reg7;
-  wire [psum_bw-1:0] reg8;
-  wire [psum_bw-1:0] reg9;
-  wire [psum_bw-1:0] reg10;
-  wire [psum_bw-1:0] reg11;
-  wire [psum_bw-1:0] reg12;
-  wire [psum_bw-1:0] reg13;
-  wire [psum_bw-1:0] reg14;
-  wire [psum_bw-1:0] reg15;
+  integer in_ptr, out_ptr;
 
-  assign reg0 = reg_bank[0];
-  assign reg1 = reg_bank[1];
-  assign reg2 = reg_bank[2];
-  assign reg3 = reg_bank[3];
-  assign reg4 = reg_bank[4];
-  assign reg5 = reg_bank[5];
-  assign reg6 = reg_bank[6];
-  assign reg7 = reg_bank[7];
-  assign reg8 = reg_bank[8];
-  assign reg9 = reg_bank[9];
-  assign reg10 = reg_bank[10];
-  assign reg11 = reg_bank[11];
-  assign reg12 = reg_bank[12];
-  assign reg13 = reg_bank[13];
-  assign reg14 = reg_bank[14];
-  assign reg15 = reg_bank[15];
-
-  integer in_ptr, out_ptr, j;
   assign psum_out = psum_out_reg;
 
   always @(posedge clk or posedge reset )begin

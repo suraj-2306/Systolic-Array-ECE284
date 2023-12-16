@@ -14,7 +14,6 @@ module corelet ( input wire clk,
 
     output  ready                     // Core operation complete. Data is ready in OSRAM.
 
-    // YJ // Add a connection from SFU to OSRAM
     // Add an output to signal computation complete
 
     // input wire l0rd, input wire l0wr,
@@ -135,8 +134,7 @@ module corelet ( input wire clk,
 
   // ---------- Corelet reg ----------
 
-  // YJ // This section is used to generate the addresses for fetching data from ISRAM.
-  // Review the reg here.
+// YJ // Rewrite this section
   always @* begin
     case(kij)
       'd0: lut_ptr = 'd0;
@@ -151,7 +149,6 @@ module corelet ( input wire clk,
     endcase
     ACT_ADDR = lut_ptr + SM_counter + {SM_counter[3:2],1'b0};
     WEIGHT_ADDR = {kij,3'b0} + SM_counter;
-    // YJ // Need to review this reg
     AW_ADDR_MUX = (SM_state==ACT_LD) ? ACT_ADDR + 72 : WEIGHT_ADDR;
   end
 
@@ -173,14 +170,6 @@ module corelet ( input wire clk,
       kij         <= 'd0;
     end
     else begin
-      // YJ // Do we need these delayed signals?
-      // SM_counter  <= #1 SM_counter_next;
-      // SM_state    <= #1 SM_state_next;
-      // L0_WRITE    <= #1 L0_write_next;
-      // L0_READ     <= #1 L0_read_next;
-      // MA_INSTR_IN <= #1 MA_instr_in_next;
-      // kij         <= #1 kij_next;
-
       SM_counter  <= SM_counter_next;
       SM_state    <= SM_state_next;
       kij         <= kij_next;
@@ -188,7 +177,6 @@ module corelet ( input wire clk,
       SFU_EN      <= SFU_enable_next;
       SM_reset_ma <= SM_reset_ma_next;
       SM_reset_sfu_ptr <= SM_reset_sfu_ptr_next;
-
     end
   end
 
@@ -301,11 +289,10 @@ module corelet ( input wire clk,
       // Pop 1 line from L0 FIFOs into SysArr [Done automatically by l0rd signal]
       // l0rd = 0
       // If kij index < 8, repeat from the top (kernel loading state)
-      ACT_LD: //YJ // Add inter-cycle buffers (between activation input end and weight load beginning)
+      ACT_LD:
         if (SM_counter > 'd31) begin
           // Activations/PSums have been calculated
-          // YJ // Disable SFU to avoid any accidental overwrites. Here or 1 cycle later?
-          // YJ // Reset MAC Array to clear all weights?
+          // Reset MAC Array to clear all weights
           // Move to next step
           SFU_enable_next  <= 'd0;
           SM_counter_next  <= 'd0;
