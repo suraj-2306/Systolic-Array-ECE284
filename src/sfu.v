@@ -56,11 +56,6 @@ module sfu (
   integer in_ptr, out_ptr, j;
   assign psum_out = psum_out_reg;
 
-  initial begin
-    in_ptr  <= 'd0;
-    out_ptr <= 'd0;
-  end
-
   always @(posedge clk or posedge reset or posedge reset_ptr) begin
     if (reset) begin
       in_ptr  <= 'd0;
@@ -82,7 +77,6 @@ module sfu (
       reg_bank[13] <= 0;
       reg_bank[14] <= 0;
       reg_bank[15] <= 0;
-      psum_out_reg <= 0;
     end
 
     else if (reset_ptr) begin
@@ -98,17 +92,25 @@ module sfu (
         in_ptr <= in_ptr + 1;
     end
 
-  end
-
-  always@(posedge clk) begin
-    if (out_en) begin
+    else if (out_en) begin
       psum_out_reg <= (reg_bank[out_ptr] > 0) ? reg_bank[out_ptr] : 0;
       if(out_ptr == (input_ch - 1))
         out_ptr <= 0;
       else
         out_ptr <= out_ptr + 1;
       end
-    end
+
+  end
+
+  // always@(posedge clk) begin
+  //   if (out_en) begin
+  //     psum_out_reg <= (reg_bank[out_ptr] > 0) ? reg_bank[out_ptr] : 0;
+  //     if(out_ptr == (input_ch - 1))
+  //       out_ptr <= 0;
+  //     else
+  //       out_ptr <= out_ptr + 1;
+  //     end
+  //   end
 endmodule
 
 

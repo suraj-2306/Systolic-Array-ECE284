@@ -25,7 +25,7 @@ module corelet ( input wire clk,
 
   parameter col = 8;
   parameter row = 8;
-  parameter bw = 4;
+  parameter bw = 8; //Making it 8 here for 2 channel processing. I am writing this as the corelet will not have an input from the core regarding the bandwidth during pnr in quartus prime, as core is not included in the simulation
   parameter psum_bw = 16;
   // parameter total_cycle = 64;
   // parameter total_cycle_2nd = 8;
@@ -120,7 +120,7 @@ module corelet ( input wire clk,
   );
 
   generate
-    for (i=0; i<8; i=i+1) begin
+    for (i=0; i<8; i=i+1) begin : sfu_instance
       sfu sfu_instance(
         .psum_out(SFU_PSUMS_OUT[psum_bw*i +: psum_bw]),
         .psum_in(MA_OUT_S[psum_bw*i +:psum_bw]),
